@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="c3i-title">
+  <title id="c3i-title">TexAI Icon - Sigma Shield</title>
+  <defs>
+    <linearGradient id="c3i-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E1B4B" />
+      <stop offset="100%" style="stop-color:#312E81" />
+    </linearGradient>
+    <linearGradient id="c3i-sigma" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399" />
+      <stop offset="100%" style="stop-color:#06B6D4" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="92" height="92" rx="20" fill="url(#c3i-bg)"/>
+
+  <!-- Sigma -->
+  <path d="M28,26 L62,26 L46,50 L62,74 L28,74"
+        fill="none" stroke="url(#c3i-sigma)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Circuit traces -->
+  <line x1="62" y1="26" x2="76" y2="26" stroke="#06B6D4" stroke-width="3" opacity="0.7"/>
+  <circle cx="76" cy="26" r="4" fill="#06B6D4" opacity="0.8"/>
+
+  <line x1="62" y1="74" x2="76" y2="74" stroke="#34D399" stroke-width="3" opacity="0.7"/>
+  <circle cx="76" cy="74" r="4" fill="#34D399" opacity="0.8"/>
+
+  <line x1="28" y1="50" x2="18" y2="50" stroke="#34D399" stroke-width="2.5" opacity="0.5"/>
+  <circle cx="18" cy="50" r="3" fill="#34D399" opacity="0.6"/>
+
+  <!-- Center spark -->
+  <circle cx="68" cy="50" r="6" fill="#34D399" opacity="0.2"/>
+  <circle cx="68" cy="50" r="3" fill="#34D399"/>
+</svg>

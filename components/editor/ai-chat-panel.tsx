@@ -42,14 +42,14 @@ const suggestions = [
 function TypingIndicator() {
   return (
     <div className="flex gap-2.5 justify-start">
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 mt-0.5">
-        <Sparkles className="h-3 w-3 text-emerald-400" />
+      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15">
+        <Sparkles className="h-3 w-3 text-primary" />
       </div>
       <div className="rounded-lg bg-muted/30 px-4 py-3">
         <div className="flex items-center gap-1">
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-emerald-400" style={{ animationDelay: "0.15s" }} />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-emerald-400" style={{ animationDelay: "0.3s" }} />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-primary" style={{ animationDelay: "0.15s" }} />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-primary" style={{ animationDelay: "0.3s" }} />
         </div>
       </div>
     </div>
@@ -118,10 +118,10 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
         const blockId = `${msg.id}-${currentBlockIndex}`;
 
         return (
-          <div key={i} className="my-3 rounded-md border border-border/40 bg-zinc-950 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border/40 px-3 py-1.5">
+          <div key={i} className="my-3 overflow-hidden rounded-xl border border-border/50 bg-background/80">
+            <div className="flex items-center justify-between border-b border-border/45 px-3 py-1.5">
               <div className="flex items-center gap-1.5">
-                <Code2 className="h-3 w-3 text-emerald-400" />
+                <Code2 className="h-3 w-3 text-primary" />
                 <span className="text-xs text-muted-foreground">LaTeX</span>
               </div>
               <div className="flex items-center gap-1">
@@ -141,14 +141,14 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs text-emerald-400 hover:text-emerald-300"
+                  className="h-6 px-2 text-xs text-primary hover:text-primary/85"
                   onClick={() => onApplyCode(code)}
                 >
                   Aplicar no Editor
                 </Button>
               </div>
             </div>
-            <pre className="p-3 text-xs font-mono text-muted-foreground overflow-x-auto">
+            <pre className="overflow-x-auto p-3 font-mono text-xs text-muted-foreground">
               <code>{code}</code>
             </pre>
           </div>
@@ -163,9 +163,9 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-card/35">
       {/* Model selector */}
-      <div className="flex items-center gap-2 border-b border-border/40 px-3 py-2">
+      <div className="flex items-center gap-2 border-b border-border/45 bg-card/70 px-3 py-2">
         <Select value={model} onValueChange={setModel}>
           <SelectTrigger className="h-7 w-40 text-xs">
             <SelectValue />
@@ -184,7 +184,7 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
       <ScrollArea className="flex-1 p-3" ref={scrollRef}>
         {messages.length === 0 && !isTyping && (
           <div className="flex h-full flex-col items-center justify-center text-center py-16">
-            <Sparkles className="h-8 w-8 text-emerald-400/50 mb-3" />
+            <Sparkles className="mb-3 h-8 w-8 text-primary/60" />
             <p className="text-sm text-muted-foreground">
               Peça ajuda à IA com seu LaTeX
             </p>
@@ -198,7 +198,7 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
                 <button
                   key={s.label}
                   onClick={() => handleSend(s.prompt)}
-                  className="flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
+                  className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/45 hover:bg-primary/12 hover:text-primary"
                 >
                   <s.icon className="h-3 w-3" />
                   {s.label}
@@ -221,14 +221,14 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
                 }`}
               >
                 {msg.role === "assistant" && (
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 mt-0.5">
-                    <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                    <Sparkles className="h-3 w-3 text-primary" />
                   </div>
                 )}
                 <div
                   className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     msg.role === "user"
-                      ? "bg-emerald-500/10 text-foreground"
+                      ? "bg-primary/15 text-foreground"
                       : "bg-muted/30 text-foreground"
                   }`}
                 >
@@ -257,7 +257,7 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-border/40 p-3">
+      <div className="border-t border-border/45 bg-card/75 p-3">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -269,12 +269,12 @@ export function AiChatPanel({ onApplyCode }: AiChatPanelProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Pergunte sobre LaTeX..."
-            className="h-9 text-sm focus-visible:ring-emerald-500/50"
+            className="h-9 text-sm"
           />
           <Button
             type="submit"
             size="icon"
-            className="btn-press h-9 w-9 shrink-0 bg-emerald-500 text-white hover:bg-emerald-600"
+            className="btn-press h-9 w-9 shrink-0 rounded-full"
             disabled={!input.trim()}
           >
             <Send className="h-4 w-4" />

@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Github, Loader2, AlertCircle } from "lucide-react";
+import { Github, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { fadeInUp, fadeIn, staggerContainer } from "@/lib/motion";
 import { signIn } from "@/lib/auth-client";
 
@@ -27,6 +27,7 @@ export default function LoginPage() {
     null
   );
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,15 +71,15 @@ export default function LoginPage() {
 
   return (
     <motion.div
-      className="w-full max-w-[540px] px-4"
+      className="w-full max-w-[560px] px-4"
       variants={fadeIn}
       initial="hidden"
       animate="visible"
     >
-      <Card className="w-full border-border/40 shadow-xl shadow-black/20">
+      <Card className="w-full border-border/55 bg-card/80 shadow-[0_30px_60px_oklch(0.07_0.01_230/55%)] backdrop-blur-xl">
         <CardHeader className="text-center pb-2 pt-8 px-8 sm:px-12">
           <motion.h1
-            className="text-2xl sm:text-3xl font-bold tracking-tight"
+            className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl"
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
@@ -86,7 +87,7 @@ export default function LoginPage() {
             Bem-vindo de volta
           </motion.h1>
           <motion.p
-            className="text-sm text-muted-foreground mt-1.5"
+            className="mt-2 text-sm uppercase tracking-[0.18em] text-muted-foreground"
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
@@ -119,7 +120,7 @@ export default function LoginPage() {
             <motion.div variants={fadeInUp}>
               <Button
                 variant="outline"
-                className="w-full gap-2.5 h-11 btn-press text-sm"
+                className="h-11 w-full gap-2.5 rounded-full text-sm"
                 onClick={() => handleOAuth("google")}
                 disabled={isDisabled}
               >
@@ -151,7 +152,7 @@ export default function LoginPage() {
             <motion.div variants={fadeInUp}>
               <Button
                 variant="outline"
-                className="w-full gap-2.5 h-11 btn-press text-sm"
+                className="h-11 w-full gap-2.5 rounded-full text-sm"
                 onClick={() => handleOAuth("github")}
                 disabled={isDisabled}
               >
@@ -198,26 +199,36 @@ export default function LoginPage() {
                 <Label htmlFor="password">Senha</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-muted-foreground hover:text-emerald-400 transition-colors"
+                  className="text-xs text-muted-foreground transition-colors hover:text-primary"
                 >
                   Esqueceu a senha?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Digite sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isDisabled}
-                className="h-11"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Digite sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isDisabled}
+                  className="h-11 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </motion.div>
             <motion.div variants={fadeInUp} className="pt-1">
               <Button
                 type="submit"
-                className="w-full h-11 bg-emerald-500 text-white hover:bg-emerald-600 btn-press font-medium"
+                className="btn-press h-11 w-full rounded-full font-medium"
                 disabled={isDisabled}
               >
                 {loading ? (
@@ -238,7 +249,7 @@ export default function LoginPage() {
             Não tem uma conta?{" "}
             <Link
               href="/register"
-              className="font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="font-medium text-primary transition-colors hover:text-primary/85"
             >
               Cadastre-se
             </Link>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" role="img" aria-labelledby="c5-title c5-desc">
+  <title id="c5-title">TexAI Logo - Typographic</title>
+  <desc id="c5-desc">Pure typographic TexAI logo with integrated design elements</desc>
+  <defs>
+    <linearGradient id="c5-ai-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5" />
+      <stop offset="100%" style="stop-color:#06B6D4" />
+    </linearGradient>
+    <linearGradient id="c5-underline" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:0" />
+      <stop offset="20%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="80%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Pure wordmark approach -->
+  <g id="c5-wordmark" transform="translate(20, 0)">
+    <!-- "T" with special serif treatment -->
+    <text x="0" y="72" font-family="'CMU Serif', 'Computer Modern', 'Times New Roman', Georgia, serif" font-size="72" font-weight="400" fill="#0F172A">T</text>
+
+    <!-- "e" slightly lowered like real TeX -->
+    <text x="42" y="76" font-family="'CMU Serif', 'Computer Modern', 'Times New Roman', Georgia, serif" font-size="64" fill="#0F172A">e</text>
+
+    <!-- "x" with crossing emphasized -->
+    <text x="80" y="72" font-family="'CMU Serif', 'Computer Modern', 'Times New Roman', Georgia, serif" font-size="72" font-weight="400" fill="#0F172A">x</text>
+
+    <!-- Separator dot -->
+    <circle cx="132" cy="64" r="4" fill="url(#c5-ai-grad)"/>
+
+    <!-- "A" modern -->
+    <text x="146" y="72" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="800" fill="url(#c5-ai-grad)">A</text>
+
+    <!-- "I" modern with special top -->
+    <text x="206" y="72" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="800" fill="url(#c5-ai-grad)">I</text>
+
+    <!-- Gradient underline -->
+    <rect x="0" y="82" width="240" height="3" rx="1.5" fill="url(#c5-underline)"/>
+
+    <!-- Three small AI dots above the I -->
+    <circle cx="218" cy="10" r="2.5" fill="#06B6D4" opacity="0.4"/>
+    <circle cx="226" cy="6" r="2" fill="#4F46E5" opacity="0.3"/>
+    <circle cx="212" cy="14" r="1.5" fill="#06B6D4" opacity="0.25"/>
+  </g>
+</svg>

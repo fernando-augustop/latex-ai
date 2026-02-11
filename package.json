@@ -2,7 +2,7 @@
   "name": "texai",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@10.29.2",
   "scripts": {
     "dev": "concurrently -n next,convex -c blue,yellow \"next dev --turbopack\" \"convex dev\"",
     "dev:next": "next dev --turbopack",
@@ -50,6 +50,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "agentation": "^2.2.0",
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^9",

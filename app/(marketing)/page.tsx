@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -12,8 +13,8 @@ import {
   ArrowRight,
   Code2,
   BookOpen,
+  WandSparkles,
 } from "lucide-react";
-import { fadeInUp, staggerContainer, cardHover } from "@/lib/motion";
 
 const sampleLatex = `\\documentclass{article}
 \\usepackage{amsmath}
@@ -38,171 +39,165 @@ const features = [
     icon: Sparkles,
     title: "Assistente de IA",
     description:
-      "Receba sugestões inteligentes de LaTeX, auto-complete comandos e corrija erros de compilação com IA.",
+      "Receba sugestões inteligentes de LaTeX, auto-complete comandos e correções instantâneas de sintaxe.",
   },
   {
     icon: Eye,
     title: "Preview em Tempo Real",
     description:
-      "Veja seu documento renderizado enquanto digita. Compilação automática com feedback visual instantâneo.",
+      "Acompanhe o documento renderizado enquanto escreve com feedback visual contínuo e sem fricção.",
   },
   {
     icon: FileText,
     title: "Templates Profissionais",
     description:
-      "Comece com templates para artigos, relatórios, currículos e apresentações. Prontos para usar.",
+      "Comece com bases sólidas para artigos, relatórios, currículos e apresentações acadêmicas.",
   },
   {
     icon: Users,
     title: "Feito para Todos",
     description:
-      "De estudantes escrevendo seu primeiro artigo a pesquisadores publicando em revistas. O TexAI se adapta a você.",
+      "De estudantes a pesquisadores, o fluxo se adapta ao seu nível sem sacrificar poder técnico.",
   },
 ];
 
-const stats = [
-  { value: "5.000+", label: "Usuários" },
-  { value: "50.000+", label: "Documentos" },
-  { value: "99.9%", label: "Uptime" },
-];
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+};
 
 const stagger = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.12,
     },
   },
 };
 
-const fadeInUpLocal = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-};
+const titlePhrases = ["TexAI", "artigos", "teses", "currículos", "ideias"];
 
 export default function LandingPage() {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % titlePhrases.length);
+    }, 2200);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/10 via-background to-background" />
+      <section className="relative flex flex-col justify-center overflow-hidden px-4 pb-14 pt-12 sm:px-6 lg:min-h-[calc(100vh-80px)] lg:px-8 lg:pt-0">
+        <div className="absolute -left-32 top-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -right-24 top-28 h-80 w-80 rounded-full bg-sky-400/20 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <motion.div
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-sm text-emerald-400"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Editor LaTeX com IA
-            </motion.div>
+        <motion.div
+          className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-stretch"
+          variants={stagger}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div variants={fadeUp} className="flex flex-col pt-2">
+            <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-primary/35 bg-primary/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
+              <WandSparkles className="h-3.5 w-3.5" />
+              Workspace LaTeX com IA
+            </div>
 
-            <h1 className="mx-auto max-w-4xl font-serif text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-              Escreva LaTeX,
-              <br />
-              <span className="text-gradient">com o Poder da IA</span>
+            <h1 className="whitespace-nowrap font-mono text-[2.2rem] leading-[0.95] tracking-[-0.04em] sm:text-[3.3rem] lg:text-[4rem]">
+              <span className="text-primary drop-shadow-[0_0_16px_rgba(42,213,157,0.35)]">
+                \begin
+              </span>
+              <span className="text-[#b5d8ba]">{"{"}</span>
+              <span className="inline-block align-baseline text-slate-100">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={titlePhrases[phraseIndex]}
+                    initial={{ y: 14, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -14, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="inline-block"
+                  >
+                    {titlePhrases[phraseIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <span className="text-[#b5d8ba]">{"}"}</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-              O editor LaTeX moderno com assistência inteligente de IA.
-              Escreva, compile e visualize seus documentos em tempo real.
+            <p className="mt-6 max-w-xl text-xs uppercase tracking-[0.22em] text-muted-foreground/90 sm:text-sm md:mt-8">
+              da ideia ao latex pronto para publicação
             </p>
 
-            <motion.div
-              className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Button
-                size="lg"
-                className="bg-emerald-500 text-white hover:bg-emerald-600 gap-2 text-base px-8 btn-press"
-                asChild
-              >
+            <p className="mt-10 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mt-12">
+              Um editor pensado para ritmo real de produção: IA para acelerar,
+              preview para validar e templates para começar em segundos.
+            </p>
+
+            <div className="mt-auto flex flex-col gap-3 pt-10 sm:flex-row sm:items-center">
+              <Button size="lg" className="btn-press gap-2 rounded-full px-8 text-base" asChild>
                 <Link href="/register">
                   Comece Grátis
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="gap-2 text-base px-8 btn-press"
-                asChild
-              >
-                <Link href="/pricing">Ver Preços</Link>
+              <Button size="lg" variant="outline" className="btn-press rounded-full px-8 text-base" asChild>
+                <Link href="/pricing">Ver Planos</Link>
               </Button>
-            </motion.div>
+            </div>
           </motion.div>
 
-          {/* Animated Demo */}
-          <motion.div
-            className="mx-auto mt-16 max-w-5xl"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.7 }}
-          >
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xl shadow-emerald-500/5">
-              <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-3">
+          <motion.div variants={fadeUp} className="relative flex flex-col">
+            <div className="panel-glass animate-emerald-glow flex flex-col overflow-hidden rounded-3xl">
+              <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
                 <div className="flex gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-red-500/60" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500/60" />
-                  <div className="h-3 w-3 rounded-full bg-green-500/60" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-300/80" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-300/80" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-300/80" />
                 </div>
-                <span className="ml-2 text-xs text-muted-foreground font-mono">
+                <span className="ml-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   main.tex
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                {/* Code side */}
-                <div className="border-r border-border/60 p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Code2 className="h-4 w-4 text-emerald-400" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Editor
-                    </span>
+
+              <div className="grid gap-0 md:grid-cols-2">
+                <div className="border-b border-border/50 p-5 md:border-b-0 md:border-r">
+                  <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    <Code2 className="h-3.5 w-3.5 text-primary" />
+                    Editor
                   </div>
-                  <pre className="text-sm font-mono text-muted-foreground leading-relaxed overflow-x-auto">
+                  <pre className="text-xs leading-relaxed text-muted-foreground">
                     <code>{sampleLatex}</code>
                   </pre>
                 </div>
-                {/* Preview side */}
-                <div className="p-6 bg-white dark:bg-zinc-900/50">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BookOpen className="h-4 w-4 text-emerald-400" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Preview
-                    </span>
+
+                <div className="flex flex-col bg-card/40 p-5">
+                  <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    Preview
                   </div>
-                  <div className="space-y-4 text-sm text-foreground">
-                    <h2 className="text-center text-lg font-serif font-bold">
-                      Meu Artigo de Pesquisa
-                    </h2>
-                    <p className="text-center text-xs text-muted-foreground">
-                      Maria Silva
-                    </p>
-                    <div className="pt-2">
-                      <h3 className="text-base font-serif font-semibold mb-2">
-                        1 Introdução
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        A equação <em>E = mc</em>
-                        <sup>2</sup> transformou nossa compreensão da física.
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center py-4">
-                      <div className="rounded bg-muted/50 px-6 py-3 font-mono text-sm text-center">
-                        <span className="text-muted-foreground">
-                          &int;<sub>0</sub>
-                          <sup>&infin;</sup> e<sup>-x&sup2;</sup> dx =
-                          &radic;&pi; / 2
-                        </span>
+                  <div className="relative flex-1 rounded-lg border border-zinc-300/70 bg-gradient-to-b from-white to-zinc-50 px-5 py-5 text-zinc-900 shadow-[0_22px_35px_rgba(0,0,0,0.18)]">
+                    <h2 className="text-center font-serif text-lg font-semibold">Meu Artigo de Pesquisa</h2>
+                    <p className="mt-1 text-center text-xs tracking-wide text-zinc-500">Maria Silva</p>
+
+                    <div className="mt-5 space-y-3 text-xs leading-relaxed text-zinc-700">
+                      <div>
+                        <h3 className="font-serif text-sm font-semibold text-zinc-900">1 Introdução</h3>
+                        <p className="mt-1">
+                          A equação <em>E = mc</em>
+                          <sup>2</sup> transformou nossa compreensão da física.
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-3 text-center font-serif text-sm text-zinc-700">
+                        <span className="text-lg leading-none">∫</span>
+                        <sub className="text-[9px]">0</sub>
+                        <sup className="text-[9px]">∞</sup>
+                        {" "}
+                        <em>e</em>
+                        <sup className="text-[9px]">−<em>x</em>²</sup>
+                        {" "}d<em>x</em> = <span className="text-lg leading-none">√</span><span className="border-t border-zinc-400">π</span> / 2
                       </div>
                     </div>
                   </div>
@@ -210,47 +205,42 @@ export default function LandingPage() {
               </div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="features" className="scroll-mt-10 px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
           <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            className="mx-auto max-w-2xl text-center"
+            variants={fadeUp}
+            initial="initial"
+            whileInView="animate"
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
           >
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">
-              Tudo que você precisa para escrever LaTeX
+            <h2 className="font-serif text-4xl font-semibold sm:text-5xl">
+              Ferramentas que respeitam seu fluxo
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Um ambiente completo para documentos acadêmicos e profissionais.
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Design limpo para foco, IA para tração e recursos avançados para entregar documentos profissionais.
             </p>
           </motion.div>
 
           <motion.div
-            className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4"
             variants={stagger}
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
           >
             {features.map((feature) => (
-              <motion.div
-                key={feature.title}
-                variants={fadeInUpLocal}
-                whileHover={{ y: -2 }}
-              >
-                <Card className="group h-full border-border/40 bg-card/50 transition-colors hover:border-emerald-500/30 hover:bg-card">
+              <motion.div key={feature.title} variants={fadeUp}>
+                <Card className="card-hover-glow h-full border-border/55 bg-card/75">
                   <CardContent className="p-6">
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <feature.icon className="h-5 w-5 text-emerald-400" />
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/40 bg-primary/12">
+                      <feature.icon className="h-5 w-5 text-primary" />
                     </div>
-                    <h3 className="text-lg font-semibold">{feature.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    <h3 className="font-serif text-2xl leading-tight">{feature.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                       {feature.description}
                     </p>
                   </CardContent>
@@ -258,79 +248,24 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </motion.div>
-        </div>
-      </section>
-
-      {/* Social Proof Section */}
-      <section className="border-y border-border/40 bg-muted/20 py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-sm font-medium uppercase tracking-wider text-emerald-400">
-              Confiado por
-            </p>
-            <h2 className="mt-3 font-serif text-2xl font-bold sm:text-3xl">
-              Pesquisadores, estudantes e profissionais
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Junte-se a milhares que escrevem documentos melhores com o TexAI.
-            </p>
-          </motion.div>
 
           <motion.div
-            className="mt-10 grid grid-cols-3 gap-8"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-          >
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-3xl font-bold text-emerald-400 sm:text-4xl">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="relative py-24 sm:py-32">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-500/5 via-transparent to-transparent" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            className="mt-16 rounded-3xl border border-border/55 bg-card/70 px-6 py-10 text-center backdrop-blur-lg sm:px-12"
+            variants={fadeUp}
+            initial="initial"
+            whileInView="animate"
             viewport={{ once: true }}
           >
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">
-              Pronto para começar?{" "}
-              <span className="text-gradient">É grátis.</span>
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Sem cartão de crédito. Comece a escrever LaTeX com IA hoje.
+            <h3 className="font-serif text-3xl sm:text-4xl">Transforme ideias em PDF pronto para publicação</h3>
+            <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+              Monte seu próximo paper, relatório ou currículo com um ambiente que combina performance técnica e refinamento visual.
             </p>
-            <div className="mt-8">
-              <Button
-                size="lg"
-                className="bg-emerald-500 text-white hover:bg-emerald-600 gap-2 text-base px-8 btn-press"
-                asChild
-              >
-                <Link href="/register">
-                  Comece Grátis
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+            <Button className="mt-7 btn-press rounded-full px-8" size="lg" asChild>
+              <Link href="/register">
+                Criar Conta Agora
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>

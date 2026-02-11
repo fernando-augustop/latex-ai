@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 100" role="img" aria-labelledby="c4-title c4-desc">
+  <title id="c4-title">TexAI Logo - Minimal Pen</title>
+  <desc id="c4-desc">Minimalist TexAI logo with a pen nib icon that doubles as an AI cursor</desc>
+  <defs>
+    <linearGradient id="c4-pen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5" />
+      <stop offset="100%" style="stop-color:#7C3AED" />
+    </linearGradient>
+    <linearGradient id="c4-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B" />
+      <stop offset="100%" style="stop-color:#F97316" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: Pen nib / cursor -->
+  <g id="c4-icon" transform="translate(10, 10)">
+    <!-- Pen nib shape -->
+    <path d="M40,4 L60,32 L40,80 L20,32 Z" fill="url(#c4-pen)" opacity="0.9"/>
+
+    <!-- Inner cutout for nib detail -->
+    <path d="M40,20 L48,36 L40,56 L32,36 Z" fill="#FFFFFF" opacity="0.2"/>
+
+    <!-- Ink slit -->
+    <line x1="40" y1="28" x2="40" y2="48" stroke="#FFFFFF" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+
+    <!-- AI sparkle at the tip -->
+    <circle cx="40" cy="80" r="3" fill="url(#c4-spark)"/>
+    <line x1="40" y1="74" x2="40" y2="86" stroke="#F59E0B" stroke-width="1.5" opacity="0.6"/>
+    <line x1="34" y1="80" x2="46" y2="80" stroke="#F59E0B" stroke-width="1.5" opacity="0.6"/>
+    <line x1="35" y1="75" x2="45" y2="85" stroke="#F59E0B" stroke-width="1" opacity="0.3"/>
+    <line x1="45" y1="75" x2="35" y2="85" stroke="#F59E0B" stroke-width="1" opacity="0.3"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g id="c4-text" transform="translate(90, 0)">
+    <!-- "Tex" in elegant serif -->
+    <text x="0" y="66" font-family="'CMU Serif', 'Computer Modern', 'Times New Roman', Georgia, serif" font-size="56" font-weight="400" letter-spacing="-2" fill="#1E1B4B">
+      T<tspan font-size="50" dy="4">e</tspan><tspan dy="-4" font-size="56">x</tspan>
+    </text>
+    <!-- "AI" bold modern -->
+    <text x="120" y="66" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="800" letter-spacing="-1" fill="url(#c4-pen)">AI</text>
+    <!-- Sparkle accent on the 'i' -->
+    <circle cx="208" cy="28" r="4" fill="url(#c4-spark)"/>
+  </g>
+</svg>

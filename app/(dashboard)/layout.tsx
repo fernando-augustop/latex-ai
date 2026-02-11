@@ -40,45 +40,45 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="grid-overlay flex min-h-screen flex-col">
       {/* Dashboard Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6">
-            <Link href="/projects" className="font-serif text-xl font-bold">
-              Tex<span className="text-gradient">AI</span>
-            </Link>
-            <div className="hidden items-center gap-1 sm:flex">
-              {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-                return (
-                  <Button
-                    key={item.href}
-                    variant="ghost"
-                    size="sm"
-                    className={`gap-2 ${
-                      isActive
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                    asChild
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  </Button>
-                );
-              })}
-            </div>
+      <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
+        <nav className="panel-glass relative mx-auto flex h-14 max-w-7xl items-center justify-between rounded-2xl px-4 sm:px-6 lg:px-8">
+          <Link href="/projects" className="font-serif text-xl font-semibold">
+            Tex<span className="text-gradient">AI</span>
+          </Link>
+
+          {/* Nav tabs — absolutely centered */}
+          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 sm:flex">
+            {navItems.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              return (
+                <Button
+                  key={item.href}
+                  variant="ghost"
+                  size="sm"
+                  className={`gap-2 ${
+                    isActive
+                      ? "border-primary/45 bg-primary/15 text-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                  asChild
+                >
+                  <Link href={item.href}>
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                </Button>
+              );
+            })}
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full border border-border/55 bg-card/35">
                 <Avatar className="h-8 w-8">
                   {user?.image && <AvatarImage src={user.image} alt={user.name ?? ""} />}
-                  <AvatarFallback className="bg-emerald-500/10 text-emerald-400 text-sm">
+                  <AvatarFallback className="bg-primary/15 text-primary text-sm">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

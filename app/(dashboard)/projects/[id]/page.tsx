@@ -127,7 +127,7 @@ export default function EditorPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm">Carregando projeto...</p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-background/70">
       <Toolbar
         projectName={projectName}
         onProjectNameChange={handleProjectNameChange}

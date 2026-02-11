@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -24,15 +25,17 @@ import {
   File,
   Plus,
   Loader2,
+  ArrowRight,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const templateOptions = [
-  { id: "article", label: "Artigo", icon: FileText },
-  { id: "report", label: "Relatório", icon: BookOpen },
-  { id: "resume", label: "Currículo", icon: Briefcase },
-  { id: "presentation", label: "Apresentação", icon: Presentation },
-  { id: "blank", label: "Em Branco", icon: File },
+  { id: "article", label: "Artigo", description: "Paper acadêmico com seções e referências", icon: FileText },
+  { id: "report", label: "Relatório", description: "Documento técnico com capítulos", icon: BookOpen },
+  { id: "resume", label: "Currículo", description: "CV profissional formatado", icon: Briefcase },
+  { id: "presentation", label: "Apresentação", description: "Slides para defesa ou palestra", icon: Presentation },
+  { id: "blank", label: "Em Branco", description: "Documento vazio para começar do zero", icon: File },
 ];
 
 interface NewProjectDialogProps {
@@ -81,18 +84,29 @@ export function NewProjectDialog({ userId }: NewProjectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="btn-press gap-2 bg-emerald-500 text-white hover:bg-emerald-600">
+        <Button className="btn-press gap-2 rounded-full px-5">
           <Plus className="h-4 w-4" />
           Novo Projeto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Criar Novo Projeto</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6 pt-4">
+      <DialogContent className="gap-0 overflow-hidden border-border/55 bg-popover/95 p-0 backdrop-blur-xl sm:max-w-lg">
+        {/* Header */}
+        <div className="border-b border-border/40 px-6 pb-5 pt-6">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">Novo Projeto</DialogTitle>
+            <DialogDescription>
+              Escolha um modelo e dê um nome ao seu projeto.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        {/* Body */}
+        <div className="space-y-5 px-6 py-5">
+          {/* Name input */}
           <div className="space-y-2">
-            <Label htmlFor="project-name">Nome do Projeto</Label>
+            <Label htmlFor="project-name" className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+              Nome do Projeto
+            </Label>
             <Input
               id="project-name"
               placeholder="Meu Artigo de Pesquisa"
@@ -101,42 +115,79 @@ export function NewProjectDialog({ userId }: NewProjectDialogProps) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleCreate();
               }}
+              autoFocus
+              className="h-11"
             />
           </div>
 
+          {/* Template picker */}
           <div className="space-y-2">
-            <Label>Modelo</Label>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {templateOptions.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTemplate(t.id)}
-                  className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 ${
-                    template === t.id
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                      : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground hover:shadow-sm"
-                  }`}
-                >
-                  <t.icon className="h-5 w-5" />
-                  {t.label}
-                </button>
-              ))}
+            <Label className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+              Modelo
+            </Label>
+            <div className="space-y-1.5">
+              {templateOptions.map((t) => {
+                const isSelected = template === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTemplate(t.id)}
+                    className={`group flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-150 ${
+                      isSelected
+                        ? "border-primary/60 bg-primary/10 shadow-[0_0_0_1px_oklch(0.72_0.17_162/0.15)]"
+                        : "border-border/30 bg-card/30 hover:border-border/60 hover:bg-card/60"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        isSelected
+                          ? "bg-primary/20 text-primary"
+                          : "bg-muted/50 text-muted-foreground group-hover:text-foreground"
+                      }`}
+                    >
+                      <t.icon className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${
+                          isSelected ? "text-primary" : "text-foreground"
+                        }`}
+                      >
+                        {t.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {t.description}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <Check className="h-4 w-4 shrink-0 text-primary" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        </div>
 
+        {/* Footer */}
+        <div className="border-t border-border/40 bg-card/30 px-6 py-4">
           <Button
             onClick={handleCreate}
-            className="btn-press w-full bg-emerald-500 text-white hover:bg-emerald-600"
+            className="btn-press w-full gap-2 rounded-full"
+            size="lg"
             disabled={!name.trim() || creating}
           >
             {creating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Criando...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Criando projeto...
               </>
             ) : (
-              "Criar Projeto"
+              <>
+                Criar Projeto
+                <ArrowRight className="h-4 w-4" />
+              </>
             )}
           </Button>
         </div>

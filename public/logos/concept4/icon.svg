@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="c4i-title">
+  <title id="c4i-title">TexAI Icon - Minimal Pen</title>
+  <defs>
+    <linearGradient id="c4i-pen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5" />
+      <stop offset="100%" style="stop-color:#7C3AED" />
+    </linearGradient>
+    <linearGradient id="c4i-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B" />
+      <stop offset="100%" style="stop-color:#F97316" />
+    </linearGradient>
+  </defs>
+
+  <!-- Pen nib -->
+  <path d="M50,6 L74,38 L50,94 L26,38 Z" fill="url(#c4i-pen)"/>
+  <path d="M50,24 L60,42 L50,66 L40,42 Z" fill="#FFFFFF" opacity="0.2"/>
+  <line x1="50" y1="34" x2="50" y2="56" stroke="#FFFFFF" stroke-width="2.5" opacity="0.5" stroke-linecap="round"/>
+
+  <!-- AI sparkle -->
+  <circle cx="50" cy="94" r="4" fill="url(#c4i-spark)"/>
+  <line x1="50" y1="86" x2="50" y2="100" stroke="#F59E0B" stroke-width="2" opacity="0.5"/>
+  <line x1="42" y1="94" x2="58" y2="94" stroke="#F59E0B" stroke-width="2" opacity="0.5"/>
+  <line x1="44" y1="88" x2="56" y2="100" stroke="#F59E0B" stroke-width="1.2" opacity="0.3"/>
+  <line x1="56" y1="88" x2="44" y2="100" stroke="#F59E0B" stroke-width="1.2" opacity="0.3"/>
+</svg>

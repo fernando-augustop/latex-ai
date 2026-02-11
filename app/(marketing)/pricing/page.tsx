@@ -7,22 +7,18 @@ import { fadeInUp, fadeIn } from "@/lib/motion";
 
 export default function PricingPage() {
   return (
-    <section
-      className="relative py-24 sm:py-32"
-      style={{
-        backgroundImage:
-          "radial-gradient(ellipse at top, rgba(16,185,129,0.05), transparent 70%)",
-      }}
-    >
+    <section className="relative overflow-hidden px-4 pb-24 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+      <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-primary/18 blur-3xl" />
+      <div className="absolute -right-28 top-48 h-80 w-80 rounded-full bg-sky-400/18 blur-3xl" />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          className="text-center mb-12"
+          className="mb-12 text-center"
           variants={fadeIn}
           initial="hidden"
           animate="visible"
         >
           <motion.h1
-            className="font-serif text-4xl font-bold sm:text-5xl"
+            className="font-serif text-5xl font-semibold sm:text-6xl"
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
@@ -30,7 +26,7 @@ export default function PricingPage() {
             Preços simples e transparentes
           </motion.h1>
           <motion.p
-            className="mt-4 text-lg text-muted-foreground"
+            className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground"
             variants={fadeInUp}
             initial="hidden"
             animate="visible"

@@ -41,6 +41,7 @@ latex-ai/
 │   ├── (marketing)/              # Landing page + Pricing
 │   ├── (dashboard)/              # Logged-in area (projects, editor, settings)
 │   ├── api/                      # API routes (auth, chat, compile)
+│   ├── icon.svg                  # App favicon/icon
 │   ├── layout.tsx
 │   └── globals.css
 ├── components/
@@ -54,6 +55,8 @@ latex-ai/
 │   ├── auth.ts                   # BetterAuth config
 │   ├── latex/                    # Compiler + templates
 │   └── utils.ts
+├── public/logos/                  # SVG logo concepts (5 concepts, icon + horizontal variants)
+├── output/playwright/            # Playwright screenshots for visual QA
 ├── docs/                         # Project documentation + prompts
 ├── turbo.json                    # Turborepo config
 ├── package.json                  # pnpm + turbo
@@ -63,18 +66,57 @@ latex-ai/
 ## Key Technologies
 
 - **Framework**: Next.js 16 (App Router + Turbopack)
-- **Package Manager**: pnpm
+- **Package Manager**: pnpm (v10.29.2)
 - **Build System**: Turborepo
 - **Styling**: Tailwind CSS v4
 - **UI Components**: shadcn/ui
 - **AI**: Vercel AI SDK (`ai` package) with Anthropic + OpenAI providers
-- **Auth**: BetterAuth (email/password + OAuth: Google, GitHub)
+- **Auth**: BetterAuth (email/password + OAuth: Google, GitHub) — imports from `better-auth/minimal`
 - **Backend/Database**: Convex
 - **LaTeX Preview**: latex.js (client-side)
 - **Code Editor**: CodeMirror 6 with LaTeX support (`codemirror-lang-latex`)
 - **PDF Viewer**: react-pdf
-- **Animations**: Framer Motion
+- **Animations**: Framer Motion (with `AnimatePresence` for hero rotating title)
 - **State Management**: Zustand
+- **Dev Toolbar**: Agentation (`agentation` package, dev-only)
+
+## Design System
+
+### Typography
+
+- **Sans**: Outfit (`--font-outfit`) — headings, body text
+- **Serif**: Bodoni Moda (`--font-bodoni`) — brand, section headings, card titles, feature names
+- **Mono**: IBM Plex Mono (`--font-ibm-plex-mono`) — code editor, code blocks, hero `\begin{}` title
+
+### Color Palette
+
+Uses oklch color space throughout. Primary color is a green/emerald tone:
+- **Dark mode primary**: `oklch(0.68 0.18 158)` — green/emerald accent
+- **Dark mode background**: `oklch(0.14 0.015 235)` — deep blue-tinted dark
+- **Cards**: semi-transparent with backdrop-blur (`bg-card/75`, `bg-card/85`)
+- **Borders**: subtle with opacity (`border-border/55`, `border-border/60`)
+- **Text gradient** (`.text-gradient`): multi-stop gradient from `#65f2be` → `#35c9ff` → `#9eff8f`
+- Use `text-primary` / `bg-primary` instead of hardcoded emerald hex values
+
+### Glass & Surface Effects
+
+- **`.panel-glass`**: glassmorphism panel — gradient bg, subtle border, box-shadow, backdrop-blur. Used for navbar and hero code preview.
+- **`.grid-overlay`**: subtle grid pattern overlay via `::after` pseudo-element. Applied to marketing, auth, and dashboard layouts.
+- **`.section-divider`**: horizontal gradient line separator
+- **Body**: radial gradient background with subtle diagonal scan lines
+- **Cards**: `rounded-2xl`, semi-transparent bg, backdrop-blur, deep box-shadow
+- **Buttons**: `rounded-lg` by default, `rounded-full` for CTAs/pill buttons
+- **Inputs**: `rounded-lg`, inset shadow, semi-transparent background
+
+### Layout Patterns
+
+- **Navbar** (marketing + dashboard): floating style with `panel-glass`, `rounded-2xl`, padded from edges (`px-3 pt-3`). Nav links are absolutely centered in the navbar.
+- **Auth pages**: centered card with glassmorphic background, blur orbs for ambient color
+- **Dashboard**: same floating navbar, centered nav tabs, avatar dropdown
+- **Landing page hero**: two-column grid — left: rotating `\begin{...}` title (AnimatePresence), right: glassmorphic code preview with `animate-emerald-glow`
+- **Login/Register**: password show/hide toggle, pill-shaped OAuth + submit buttons, serif headings
+- **New project dialog**: vertical template list with description + check icon, header/body/footer sections
+- **PDF Viewer**: keeps preview mounted during compilation (overlay on top instead of unmounting)
 
 ## Pricing Tiers
 
@@ -111,3 +153,10 @@ The preprocessor (`lib/latex/compiler.ts` → `preprocessForPreview`) strips uns
 - Run `pnpm convex:dev` to initialize Convex (requires auth at dashboard.convex.dev)
 - See `docs/requirements.md` for full .env.local setup guide
 - **Vercel deploy** requires env vars: `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, `BETTER_AUTH_SECRET`, and at least one AI key
+- Old Next.js default assets (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`) have been removed from `public/`
+- BetterAuth Convex integration imports from `better-auth/minimal` (not `better-auth`)
+- Agentation dev toolbar is loaded only in development (`process.env.NODE_ENV === "development"`)
+- Logo assets live in `public/logos/` with 5 concept directories, each containing `icon.svg` and `horizontal.svg`
+- When styling components, use `text-primary` / `bg-primary/N` instead of hardcoded `text-emerald-400` / `bg-emerald-500` etc.
+- Buttons for main CTAs use `rounded-full` (pill shape); standard buttons use `rounded-lg`
+- Cards use `rounded-2xl` with semi-transparent backgrounds and backdrop-blur

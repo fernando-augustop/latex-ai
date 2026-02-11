@@ -39,21 +39,21 @@ export function EditorLayout({
   }
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
+    <ResizablePanelGroup orientation="horizontal" className="h-full bg-background/70">
       {/* Left panel: Editor + Chat tabs */}
       <ResizablePanel defaultSize={50} minSize={30}>
         <Tabs defaultValue="editor" className="flex h-full flex-col">
-          <TabsList className="w-full justify-start rounded-none border-b border-border/40 bg-transparent px-2 h-9">
+          <TabsList className="h-10 w-full justify-start rounded-none border-b border-border/45 bg-card/70 px-2 backdrop-blur-sm">
             <TabsTrigger
               value="editor"
-              className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-xs"
+              className="gap-1.5 rounded-md border border-transparent text-xs data-[state=active]:border-primary/35 data-[state=active]:bg-primary/12 data-[state=active]:text-foreground data-[state=active]:shadow-none"
             >
               <Code2 className="h-3.5 w-3.5" />
               Editor
             </TabsTrigger>
             <TabsTrigger
               value="chat"
-              className="gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-xs"
+              className="gap-1.5 rounded-md border border-transparent text-xs data-[state=active]:border-primary/35 data-[state=active]:bg-primary/12 data-[state=active]:text-foreground data-[state=active]:shadow-none"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Chat IA
@@ -68,7 +68,7 @@ export function EditorLayout({
         </Tabs>
       </ResizablePanel>
 
-      <ResizableHandle withHandle />
+      <ResizableHandle withHandle className="bg-border/45" />
 
       {/* Right panel: PDF viewer */}
       <ResizablePanel defaultSize={50} minSize={25}>

@@ -6,17 +6,16 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className="flex min-h-screen flex-col items-center justify-center bg-background px-4"
-      style={{
-        backgroundImage:
-          "radial-gradient(ellipse at top, rgba(16,185,129,0.05), transparent 70%)",
-      }}
-    >
-      <Link href="/" className="mb-8 font-serif text-3xl font-bold">
-        Tex<span className="text-gradient">AI</span>
-      </Link>
-      {children}
+    <div className="grid-overlay relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-14">
+      <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-primary/18 blur-3xl" />
+      <div className="absolute -right-28 bottom-20 h-80 w-80 rounded-full bg-sky-400/18 blur-3xl" />
+
+      <div className="relative flex w-full flex-col items-center">
+        <Link href="/" className="mb-9 font-serif text-4xl font-semibold tracking-tight">
+          Tex<span className="text-gradient">AI</span>
+        </Link>
+        {children}
+      </div>
     </div>
   );
 }

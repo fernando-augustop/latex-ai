@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 100" role="img" aria-labelledby="c2-title c2-desc">
+  <title id="c2-title">TexAI Logo - Bracket Concept</title>
+  <desc id="c2-desc">TexAI logo with curly braces framing a brain/circuit icon</desc>
+  <defs>
+    <linearGradient id="c2-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED" />
+      <stop offset="100%" style="stop-color:#2563EB" />
+    </linearGradient>
+    <linearGradient id="c2-accent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#A78BFA" />
+      <stop offset="100%" style="stop-color:#3B82F6" />
+    </linearGradient>
+    <linearGradient id="c2-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06B6D4" />
+      <stop offset="100%" style="stop-color:#8B5CF6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: Curly braces with AI brain -->
+  <g id="c2-icon" transform="translate(6, 6)">
+    <!-- Left curly brace -->
+    <path d="M22,8 Q14,8 14,18 L14,34 Q14,44 6,44 Q14,44 14,54 L14,70 Q14,80 22,80"
+          fill="none" stroke="url(#c2-primary)" stroke-width="5" stroke-linecap="round"/>
+
+    <!-- Right curly brace -->
+    <path d="M66,8 Q74,8 74,18 L74,34 Q74,44 82,44 Q74,44 74,54 L74,70 Q74,80 66,80"
+          fill="none" stroke="url(#c2-primary)" stroke-width="5" stroke-linecap="round"/>
+
+    <!-- Central AI brain circuit -->
+    <g transform="translate(44, 44)">
+      <!-- Core circle -->
+      <circle cx="0" cy="0" r="12" fill="url(#c2-glow)" opacity="0.15"/>
+      <circle cx="0" cy="0" r="8" fill="url(#c2-glow)" opacity="0.25"/>
+
+      <!-- Circuit paths radiating out -->
+      <line x1="0" y1="-8" x2="0" y2="-20" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+      <line x1="0" y1="8" x2="0" y2="20" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+      <line x1="-8" y1="0" x2="-16" y2="0" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+      <line x1="8" y1="0" x2="16" y2="0" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+      <line x1="-6" y1="-6" x2="-14" y2="-14" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+      <line x1="6" y1="-6" x2="14" y2="-14" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+      <line x1="-6" y1="6" x2="-14" y2="14" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+      <line x1="6" y1="6" x2="14" y2="14" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+
+      <!-- Nodes -->
+      <circle cx="0" cy="-20" r="3" fill="#06B6D4"/>
+      <circle cx="0" cy="20" r="3" fill="#06B6D4"/>
+      <circle cx="-16" cy="0" r="3" fill="#8B5CF6"/>
+      <circle cx="16" cy="0" r="3" fill="#8B5CF6"/>
+      <circle cx="-14" cy="-14" r="2.5" fill="#06B6D4" opacity="0.7"/>
+      <circle cx="14" cy="-14" r="2.5" fill="#06B6D4" opacity="0.7"/>
+      <circle cx="-14" cy="14" r="2.5" fill="#8B5CF6" opacity="0.7"/>
+      <circle cx="14" cy="14" r="2.5" fill="#8B5CF6" opacity="0.7"/>
+
+      <!-- Center dot -->
+      <circle cx="0" cy="0" r="4" fill="#FFFFFF"/>
+      <circle cx="0" cy="0" r="2.5" fill="url(#c2-glow)"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g id="c2-text" transform="translate(108, 0)">
+    <text x="0" y="66" font-family="'CMU Serif', 'Computer Modern', 'Times New Roman', Georgia, serif" font-size="54" font-weight="400" letter-spacing="-1.5" fill="#1E1B4B">
+      T<tspan font-size="48" dy="3.5">e</tspan><tspan dy="-3.5" font-size="54">x</tspan>
+    </text>
+    <text x="116" y="66" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="54" font-weight="800" letter-spacing="-0.5" fill="url(#c2-primary)">AI</text>
+    <!-- Subtle tagline -->
+    <text x="2" y="86" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" letter-spacing="4" fill="#6366F1" opacity="0.6">INTELLIGENT LATEX</text>
+  </g>
+</svg>

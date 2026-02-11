@@ -51,11 +51,11 @@ export function Toolbar({
 
   return (
     <TooltipProvider>
-      <div className="flex h-12 items-center justify-between border-b border-border/40 bg-background px-3">
+      <div className="flex h-14 items-center justify-between border-b border-border/45 bg-card/80 px-3 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="btn-press h-8 w-8" asChild>
+              <Button variant="ghost" size="icon" className="btn-press h-8 w-8 rounded-full" asChild>
                 <Link href="/projects">
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
@@ -66,13 +66,13 @@ export function Toolbar({
 
           {editing ? (
             <div className="flex items-center gap-1">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-7 w-48 text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave();
-                  if (e.key === "Escape") {
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 w-52 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave();
+                    if (e.key === "Escape") {
                     setName(projectName);
                     setEditing(false);
                   }
@@ -93,7 +93,7 @@ export function Toolbar({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setEditing(true)}
-                  className="flex items-center gap-1.5 text-sm font-medium hover:text-emerald-400 transition-colors"
+                  className="flex items-center gap-1.5 font-serif text-lg leading-none transition-colors hover:text-primary"
                 >
                   {projectName}
                   <Pencil className="h-3 w-3 text-muted-foreground" />
@@ -110,7 +110,7 @@ export function Toolbar({
               <Button
                 variant="default"
                 size="sm"
-                className="btn-press gap-1.5 bg-emerald-500 text-white hover:bg-emerald-600 h-8"
+                className="btn-press h-9 gap-1.5 rounded-full border border-emerald/60 bg-emerald px-4 text-emerald-foreground shadow-[0_10px_22px_oklch(0.05_0.02_230/38%)] hover:bg-emerald/92 hover:text-emerald-foreground disabled:cursor-not-allowed disabled:opacity-80 disabled:bg-emerald/75 disabled:text-emerald-foreground"
                 onClick={onCompile}
                 disabled={isCompiling}
               >
@@ -130,7 +130,7 @@ export function Toolbar({
               <Button
                 variant="outline"
                 size="sm"
-                className="btn-press gap-1.5 h-8"
+                className="btn-press h-9 gap-1.5 rounded-full px-4"
                 onClick={onDownload}
               >
                 <Download className="h-3.5 w-3.5" />
@@ -144,7 +144,7 @@ export function Toolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="btn-press h-8 w-8">
+                  <Button variant="ghost" size="icon" className="btn-press h-8 w-8 rounded-full">
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

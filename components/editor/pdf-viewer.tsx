@@ -45,10 +45,12 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
     iframe.style.width = "100%";
     iframe.style.border = "none";
     iframe.style.minHeight = "100%";
+    iframe.style.backgroundColor = "#ffffff";
 
     iframe.srcdoc = [
       "<!DOCTYPE html><html><head><style>",
-      "body { font-family: 'Times New Roman', serif; margin: 0; padding: 0; color: #000; line-height: 1.6; }",
+      "html, body { margin: 0; padding: 0; background: #fff; }",
+      "body { font-family: 'Times New Roman', serif; color: #000; background: #fff; line-height: 1.6; }",
       "h1, h2, h3 { font-family: 'Times New Roman', serif; }",
       "pre, code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }",
       "img { max-width: 100%; }",
@@ -76,15 +78,15 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
   const effectiveScale = baseScale * (zoom / 100);
 
   return (
-    <div className="flex h-full flex-col bg-zinc-900/50">
+    <div className="flex h-full flex-col bg-card/45">
       {/* Zoom controls */}
-      <div className="flex items-center justify-between border-b border-border/40 px-3 py-1.5">
-        <span className="text-xs text-muted-foreground">Visualização</span>
+      <div className="flex items-center justify-between border-b border-border/45 bg-card/75 px-3 py-2 backdrop-blur-sm">
+        <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Visualização</span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 rounded-full"
             onClick={() => setZoom((z) => Math.max(50, z - 10))}
           >
             <ZoomOut className="h-3.5 w-3.5" />
@@ -95,7 +97,7 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 rounded-full"
             onClick={() => setZoom((z) => Math.min(200, z + 10))}
           >
             <ZoomIn className="h-3.5 w-3.5" />
@@ -103,7 +105,7 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 rounded-full"
             onClick={() => setZoom(100)}
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -112,11 +114,12 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
       </div>
 
       {/* Content */}
-      <div ref={containerRef} className="flex-1 overflow-auto p-4">
+      <div ref={containerRef} className="relative flex-1 overflow-auto p-4">
+        {/* Compiling overlay — shown on top without unmounting the preview */}
         {isCompiling && (
-          <div className="flex h-full items-center justify-center">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/80 backdrop-blur-[2px]">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-10 w-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
               <p className="text-sm text-muted-foreground">Compilando...</p>
             </div>
           </div>
@@ -141,7 +144,8 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
           </div>
         )}
 
-        {htmlContent && !isCompiling && !error && (
+        {/* Preview — always mounted when htmlContent exists to preserve the iframe */}
+        {htmlContent && !error && (
           <div
             className="mx-auto overflow-hidden"
             style={{
@@ -154,11 +158,12 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
               style={{ transform: `scale(${effectiveScale})` }}
             >
               <div
-                className="bg-white rounded shadow-lg shadow-black/20 ring-1 ring-black/5 overflow-hidden"
+                className="overflow-hidden rounded bg-white shadow-lg shadow-black/20 ring-1 ring-black/5"
                 style={{
                   width: `${A4_WIDTH_PX}px`,
                   minHeight: `${Math.round(A4_WIDTH_PX * (297 / 210))}px`,
                   padding: `${A4_PADDING_PX}px`,
+                  backgroundColor: "#ffffff",
                 }}
                 ref={previewRef}
               />
@@ -169,7 +174,7 @@ export function PdfViewer({ htmlContent, isCompiling, error }: PdfViewerProps) {
         {!htmlContent && !isCompiling && !error && (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/20 border border-border/20">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/35 bg-primary/12">
                 <FileText className="h-7 w-7 text-muted-foreground/40" />
               </div>
               <div>

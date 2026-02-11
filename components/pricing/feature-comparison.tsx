@@ -27,10 +27,10 @@ const features: FeatureRow[] = [
 
 function CellContent({ value }: { value: string | boolean }) {
   if (value === true) {
-    return <Check className="h-4 w-4 text-emerald-400 mx-auto" />;
+    return <Check className="mx-auto h-4 w-4 text-primary" />;
   }
   if (value === false) {
-    return <Minus className="h-4 w-4 text-muted-foreground/40 mx-auto" />;
+    return <Minus className="mx-auto h-4 w-4 text-muted-foreground/40" />;
   }
   return (
     <span className="text-sm text-muted-foreground">{value}</span>
@@ -40,23 +40,23 @@ function CellContent({ value }: { value: string | boolean }) {
 export function FeatureComparison() {
   return (
     <div className="mt-20">
-      <h3 className="text-center font-serif text-2xl font-bold mb-8">
+      <h3 className="mb-8 text-center font-serif text-4xl font-semibold">
         Comparação de Recursos
       </h3>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto rounded-3xl border border-border/55 bg-card/75 p-2 backdrop-blur-md">
+        <table className="w-full border-collapse overflow-hidden rounded-2xl">
           <thead>
             <tr className="border-b border-border/40">
-              <th className="py-4 px-4 text-left text-sm font-medium text-muted-foreground">
+              <th className="px-4 py-4 text-left text-sm font-medium text-muted-foreground">
                 Recurso
               </th>
-              <th className="py-4 px-4 text-center text-sm font-medium">
+              <th className="px-4 py-4 text-center text-sm font-medium">
                 Free
               </th>
-              <th className="py-4 px-4 text-center text-sm font-medium text-emerald-400 bg-emerald-500/5">
+              <th className="bg-primary/10 px-4 py-4 text-center text-sm font-medium text-primary">
                 Pro
               </th>
-              <th className="py-4 px-4 text-center text-sm font-medium">
+              <th className="px-4 py-4 text-center text-sm font-medium">
                 Enterprise
               </th>
             </tr>
@@ -71,16 +71,16 @@ export function FeatureComparison() {
               <motion.tr
                 key={row.feature}
                 variants={fadeInUp}
-                className="border-b border-border/20 hover:bg-muted/20 transition-colors"
+                className="border-b border-border/20 transition-colors hover:bg-muted/20"
               >
-                <td className="py-3 px-4 text-sm">{row.feature}</td>
-                <td className="py-3 px-4 text-center">
+                <td className="px-4 py-3 text-sm">{row.feature}</td>
+                <td className="px-4 py-3 text-center">
                   <CellContent value={row.free} />
                 </td>
-                <td className="py-3 px-4 text-center bg-emerald-500/5">
+                <td className="bg-primary/10 px-4 py-3 text-center">
                   <CellContent value={row.pro} />
                 </td>
-                <td className="py-3 px-4 text-center">
+                <td className="px-4 py-3 text-center">
                   <CellContent value={row.enterprise} />
                 </td>
               </motion.tr>
