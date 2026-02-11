@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "outputs": [".next/**", "!.next/cache/**"],
+      "inputs": [
+        "app/**",
+        "components/**",
+        "lib/**",
+        "convex/**",
+        "types/**",
+        "public/**",
+        "next.config.ts",
+        "tsconfig.json",
+        "postcss.config.mjs",
+        "tailwind.config.ts",
+        "package.json"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "convex:dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
