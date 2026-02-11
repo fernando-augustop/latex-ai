@@ -7,7 +7,7 @@
     "dev": "concurrently -n next,convex -c blue,yellow \"next dev --turbopack\" \"convex dev\"",
     "dev:next": "next dev --turbopack",
     "dev:convex": "convex dev",
-    "build": "npx convex deploy --cmd 'next build'",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "convex:push": "convex deploy"
