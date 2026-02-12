@@ -76,21 +76,4 @@ export const updateContent = mutation({
   },
 });
 
-export const updateCompiledPdf = mutation({
-  args: {
-    documentId: v.id("documents"),
-    pdfUrl: v.string(),
-    compiledAt: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const doc = await ctx.db.get(args.documentId);
-    if (!doc) {
-      throw new Error("Document not found");
-    }
 
-    await ctx.db.patch(args.documentId, {
-      compiledPdfUrl: args.pdfUrl,
-      lastCompiledAt: args.compiledAt,
-    });
-  },
-});

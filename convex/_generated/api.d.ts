@@ -9,8 +9,11 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
+import type * as latex from "../latex.js";
+import type * as latexNode from "../latexNode.js";
 import type * as projects from "../projects.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as tierLimits from "../tierLimits.js";
@@ -24,8 +27,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  crons: typeof crons;
   documents: typeof documents;
   http: typeof http;
+  latex: typeof latex;
+  latexNode: typeof latexNode;
   projects: typeof projects;
   subscriptions: typeof subscriptions;
   tierLimits: typeof tierLimits;

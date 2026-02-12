@@ -1,7 +1,6 @@
 export interface CompileResult {
   success: boolean;
   html?: string;
-  pdfUrl?: string;
   errors?: string[];
 }
 
@@ -213,51 +212,6 @@ export async function compileLatexToHtml(source: string): Promise<CompileResult>
       errors: [message],
     };
   }
-}
-
-/**
- * Server-side LaTeX compilation placeholder.
- */
-export async function compileLatexToPdf(source: string): Promise<CompileResult> {
-  const apiUrl = process.env.LATEX_COMPILE_API_URL;
-
-  if (apiUrl) {
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return {
-          success: false,
-          errors: [`Server compilation failed: ${errorText}`],
-        };
-      }
-
-      const data = (await response.json()) as { pdfUrl?: string };
-      return {
-        success: true,
-        pdfUrl: data.pdfUrl,
-      };
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unknown server error";
-      return {
-        success: false,
-        errors: [`Server compilation error: ${message}`],
-      };
-    }
-  }
-
-  return {
-    success: false,
-    errors: [
-      "Server-side compilation is not configured. Set LATEX_COMPILE_API_URL in your environment variables.",
-    ],
-  };
 }
 
 /**

@@ -44,7 +44,7 @@ export default function DashboardLayout({
       {/* Dashboard Navbar */}
       <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-5 sm:pt-4">
         <nav className="panel-glass relative mx-auto flex h-14 max-w-7xl items-center justify-between rounded-2xl px-4 sm:px-6 lg:px-8">
-          <Link href="/projects" className="font-serif text-xl font-semibold">
+          <Link href="/" className="font-serif text-xl font-semibold">
             Tex<span className="text-gradient">AI</span>
           </Link>
 

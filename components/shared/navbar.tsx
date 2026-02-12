@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
 
 const navLinks = [
   { href: "/", label: "Início", scrollToTop: true },
@@ -21,6 +22,7 @@ const navLinks = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const handleScrollLink = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, scrollTo: string) => {
@@ -71,16 +73,28 @@ export function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
-            <Link href="/login">Entrar</Link>
-          </Button>
-          <Button
-            size="sm"
-            className="btn-press rounded-full px-5"
-            asChild
-          >
-            <Link href="/register">Começar</Link>
-          </Button>
+          {session?.user ? (
+            <Button
+              size="sm"
+              className="btn-press rounded-full px-5"
+              asChild
+            >
+              <Link href="/projects">Meus Projetos</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                <Link href="/login">Entrar</Link>
+              </Button>
+              <Button
+                size="sm"
+                className="btn-press rounded-full px-5"
+                asChild
+              >
+                <Link href="/register">Começar</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile menu */}
@@ -118,16 +132,26 @@ export function Navbar() {
                 ))}
               </div>
               <div className="flex flex-col gap-2 border-t border-border/50 pt-4">
-                <Button variant="ghost" asChild>
-                  <Link href="/login" onClick={() => setOpen(false)}>
-                    Entrar
-                  </Link>
-                </Button>
-                <Button className="rounded-full" asChild>
-                  <Link href="/register" onClick={() => setOpen(false)}>
-                    Começar
-                  </Link>
-                </Button>
+                {session?.user ? (
+                  <Button className="rounded-full" asChild>
+                    <Link href="/projects" onClick={() => setOpen(false)}>
+                      Meus Projetos
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" asChild>
+                      <Link href="/login" onClick={() => setOpen(false)}>
+                        Entrar
+                      </Link>
+                    </Button>
+                    <Button className="rounded-full" asChild>
+                      <Link href="/register" onClick={() => setOpen(false)}>
+                        Começar
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </SheetContent>

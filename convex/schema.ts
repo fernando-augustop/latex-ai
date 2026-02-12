@@ -28,12 +28,32 @@ export default defineSchema({
     projectId: v.id("projects"),
     filename: v.string(),
     content: v.string(),
-    compiledPdfUrl: v.optional(v.string()),
     lastCompiledAt: v.optional(v.number()),
     version: v.number(),
   })
     .index("by_project", ["projectId"])
     .index("by_project_filename", ["projectId", "filename"]),
+
+  compilations: defineTable({
+    userId: v.id("users"),
+    documentId: v.id("documents"),
+    sourceHash: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("compiling"),
+      v.literal("success"),
+      v.literal("error")
+    ),
+    engine: v.optional(v.string()),
+    logs: v.optional(v.string()),
+    errors: v.optional(v.string()),
+    compiledAt: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_document", ["documentId"])
+    .index("by_document_hash", ["documentId", "sourceHash"])
+    .index("by_status", ["status"]),
 
   chatMessages: defineTable({
     documentId: v.id("documents"),

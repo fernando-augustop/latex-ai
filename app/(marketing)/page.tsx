@@ -74,7 +74,7 @@ const stagger = {
   },
 };
 
-const titlePhrases = ["TexAI", "artigos", "teses", "currículos", "ideias"];
+const titlePhrases = ["TexAI", "artigos", "teses", "ideias"];
 
 export default function LandingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -99,8 +99,8 @@ export default function LandingPage() {
           initial="initial"
           animate="animate"
         >
-          <motion.div variants={fadeUp} className="flex flex-col pt-2">
-            <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-primary/35 bg-primary/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
+          <motion.div variants={fadeUp} className="flex flex-col">
+            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/35 bg-primary/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
               <WandSparkles className="h-3.5 w-3.5" />
               Workspace LaTeX com IA
             </div>
@@ -127,16 +127,38 @@ export default function LandingPage() {
               <span className="text-[#b5d8ba]">{"}"}</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-xs uppercase tracking-[0.22em] text-muted-foreground/90 sm:text-sm md:mt-8">
+            <p className="mt-4 max-w-xl text-xs uppercase tracking-[0.22em] text-muted-foreground/90 sm:text-sm md:mt-5">
               da ideia ao latex pronto para publicação
             </p>
 
-            <p className="mt-10 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mt-12">
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mt-6">
               Um editor pensado para ritmo real de produção: IA para acelerar,
               preview para validar e templates para começar em segundos.
             </p>
 
-            <div className="mt-auto flex flex-col gap-3 pt-10 sm:flex-row sm:items-center">
+            <p className="mt-auto pt-4 font-mono text-[1.6rem] tracking-[-0.04em] sm:text-[2.2rem] lg:text-[2.8rem]">
+              <span className="text-primary/70 drop-shadow-[0_0_12px_rgba(42,213,157,0.25)]">
+                \end
+              </span>
+              <span className="text-[#b5d8ba]/70">{"{"}</span>
+              <span className="inline-block align-baseline text-slate-100/70">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={`end-${titlePhrases[phraseIndex]}`}
+                    initial={{ y: 14, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -14, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="inline-block"
+                  >
+                    {titlePhrases[phraseIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <span className="text-[#b5d8ba]/70">{"}"}</span>
+            </p>
+
+            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center">
               <Button size="lg" className="btn-press gap-2 rounded-full px-8 text-base" asChild>
                 <Link href="/register">
                   Comece Grátis
@@ -178,26 +200,47 @@ export default function LandingPage() {
                     <BookOpen className="h-3.5 w-3.5 text-primary" />
                     Preview
                   </div>
-                  <div className="relative flex-1 rounded-lg border border-zinc-300/70 bg-gradient-to-b from-white to-zinc-50 px-5 py-5 text-zinc-900 shadow-[0_22px_35px_rgba(0,0,0,0.18)]">
-                    <h2 className="text-center font-serif text-lg font-semibold">Meu Artigo de Pesquisa</h2>
-                    <p className="mt-1 text-center text-xs tracking-wide text-zinc-500">Maria Silva</p>
+                  <div className="relative flex-1 rounded-sm bg-white px-7 py-6 text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_20px_40px_rgba(0,0,0,0.15)]">
+                    {/* Page shadow left edge */}
+                    <div className="absolute inset-y-0 left-0 w-px bg-zinc-300/60" />
 
-                    <div className="mt-5 space-y-3 text-xs leading-relaxed text-zinc-700">
+                    <h2 className="text-center font-serif text-[15px] font-bold leading-snug tracking-tight">
+                      Meu Artigo de Pesquisa
+                    </h2>
+                    <p className="mt-1.5 text-center text-[10px] text-zinc-600">Maria Silva</p>
+                    <div className="mx-auto mt-1 h-px w-16 bg-zinc-200" />
+
+                    <div className="mt-4 space-y-2.5 text-[10px] leading-[1.65] text-zinc-700">
                       <div>
-                        <h3 className="font-serif text-sm font-semibold text-zinc-900">1 Introdução</h3>
-                        <p className="mt-1">
-                          A equação <em>E = mc</em>
-                          <sup>2</sup> transformou nossa compreensão da física.
+                        <h3 className="text-[11px] font-bold text-zinc-900">
+                          <span className="mr-1.5">1</span>Introdução
+                        </h3>
+                        <p className="mt-1 text-justify">
+                          A equação <em className="font-serif">E</em> = <em className="font-serif">mc</em>
+                          <sup className="text-[7px]">2</sup> transformou nossa compreensão da física moderna
+                          e estabeleceu as bases da relatividade especial.
                         </p>
                       </div>
-                      <div className="rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-3 text-center font-serif text-sm text-zinc-700">
-                        <span className="text-lg leading-none">∫</span>
-                        <sub className="text-[9px]">0</sub>
-                        <sup className="text-[9px]">∞</sup>
-                        {" "}
-                        <em>e</em>
-                        <sup className="text-[9px]">−<em>x</em>²</sup>
-                        {" "}d<em>x</em> = <span className="text-lg leading-none">√</span><span className="border-t border-zinc-400">π</span> / 2
+
+                      <div className="my-2 rounded border border-zinc-100 bg-zinc-50/80 px-3 py-2.5 text-center">
+                        <span className="font-serif text-[13px] italic leading-none tracking-tight text-zinc-800">
+                          <span className="relative mr-0.5 inline-block text-[20px] leading-none not-italic" style={{ verticalAlign: "-7px" }}>∫</span>
+                          <span className="relative inline-block w-2">
+                            <span className="absolute -top-2 left-0.5 text-[7px] not-italic">∞</span>
+                            <span className="absolute -bottom-0.5 left-0.5 text-[7px] not-italic">0</span>
+                          </span>
+                          <span className="ml-0.5">e</span>
+                          <sup className="text-[7px]">−x²</sup>
+                          <span className="ml-0.5 not-italic">d</span>x
+                          <span className="mx-1.5 not-italic">=</span>
+                          <span className="inline-flex flex-col items-center align-middle">
+                            <span className="border-b border-zinc-400 px-1 text-[9px] leading-tight">
+                              <span className="not-italic">√</span>π
+                            </span>
+                            <span className="text-[9px] not-italic leading-tight">2</span>
+                          </span>
+                        </span>
+                        <span className="ml-4 text-[8px] not-italic text-zinc-400">(1)</span>
                       </div>
                     </div>
                   </div>

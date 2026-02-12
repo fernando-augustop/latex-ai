@@ -11,11 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CompilationStatus } from "./compilation-status";
 import {
   ArrowLeft,
   Play,
@@ -32,6 +40,12 @@ interface ToolbarProps {
   onCompile: () => void;
   onDownload: () => void;
   isCompiling: boolean;
+  serverStatus?: "idle" | "compiling" | "success" | "error" | "offline";
+  serverDurationMs?: number | null;
+  serverError?: string | null;
+  hasServerCompile?: boolean;
+  engine?: string;
+  onEngineChange?: (engine: string) => void;
 }
 
 export function Toolbar({
@@ -40,6 +54,12 @@ export function Toolbar({
   onCompile,
   onDownload,
   isCompiling,
+  serverStatus,
+  serverDurationMs,
+  serverError,
+  hasServerCompile,
+  engine,
+  onEngineChange,
 }: ToolbarProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(projectName);
@@ -104,7 +124,32 @@ export function Toolbar({
           )}
         </div>
 
+        {/* Center: compilation status */}
+        <div className="flex flex-1 items-center justify-center">
+          {hasServerCompile && (
+            <CompilationStatus
+              status={serverStatus ?? "idle"}
+              durationMs={serverDurationMs ?? null}
+              error={serverError ?? null}
+            />
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
+          {hasServerCompile && onEngineChange && (
+            <Select value={engine} onValueChange={onEngineChange}>
+              <SelectTrigger className="h-9 w-[130px] rounded-full text-xs border-border/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tectonic">Tectonic</SelectItem>
+                <SelectItem value="pdflatex">pdfLaTeX</SelectItem>
+                <SelectItem value="xelatex">XeLaTeX</SelectItem>
+                <SelectItem value="lualatex">LuaLaTeX</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

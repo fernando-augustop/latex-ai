@@ -17,6 +17,12 @@ interface EditorLayoutProps {
   htmlContent: string | null;
   isCompiling: boolean;
   compilationError: string | null;
+  previewMode: "live" | "pdf";
+  onPreviewModeChange: (mode: "live" | "pdf") => void;
+  serverPdfBlobUrl: string | null;
+  serverCompiling: boolean;
+  serverError: string | null;
+  hasServerCompile: boolean;
 }
 
 export function EditorLayout({
@@ -25,6 +31,12 @@ export function EditorLayout({
   htmlContent,
   isCompiling,
   compilationError,
+  previewMode,
+  onPreviewModeChange,
+  serverPdfBlobUrl,
+  serverCompiling,
+  serverError,
+  hasServerCompile,
 }: EditorLayoutProps) {
   function handleApplyCode(code: string) {
     // Append code to the editor before \end{document} or at the end
@@ -76,6 +88,12 @@ export function EditorLayout({
           htmlContent={htmlContent}
           isCompiling={isCompiling}
           error={compilationError}
+          previewMode={previewMode}
+          onPreviewModeChange={onPreviewModeChange}
+          serverPdfBlobUrl={serverPdfBlobUrl}
+          serverCompiling={serverCompiling}
+          serverError={serverError}
+          hasServerCompile={hasServerCompile}
         />
       </ResizablePanel>
     </ResizablePanelGroup>
