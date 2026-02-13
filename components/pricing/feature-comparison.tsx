@@ -15,12 +15,10 @@ const features: FeatureRow[] = [
   { feature: "Projetos", free: "3", pro: "Ilimitados", enterprise: "Ilimitados" },
   { feature: "Mensagens de IA", free: false, pro: "50/dia", enterprise: "Ilimitadas" },
   { feature: "Modelos de IA", free: false, pro: "Haiku, GPT-4o-mini", enterprise: "Todos os modelos" },
-  { feature: "Compilação PDF", free: "No navegador", pro: "No servidor", enterprise: "Prioritária" },
+  { feature: "Compilação PDF", free: "Servidor (15/min)", pro: "Servidor (ilimitada)", enterprise: "Servidor (ilimitada)" },
   { feature: "Armazenamento", free: "50MB", pro: "5GB", enterprise: "Ilimitado" },
   { feature: "Destaque de Sintaxe", free: true, pro: true, enterprise: true },
   { feature: "Preview em Tempo Real", free: true, pro: true, enterprise: true },
-  { feature: "Exportação PDF", free: false, pro: true, enterprise: true },
-  { feature: "Histórico de Versões", free: false, pro: true, enterprise: true },
   { feature: "Suporte Prioritário", free: false, pro: false, enterprise: true },
   { feature: "Acesso à API", free: false, pro: false, enterprise: true },
 ];

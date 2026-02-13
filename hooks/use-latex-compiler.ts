@@ -50,7 +50,11 @@ export function useLatexCompiler({
 
   // Revoke old blob URL and set new one
   const setBlobUrl = useCallback((url: string | null) => {
-    // Don't revoke cached URLs — they're managed by the cache
+    const oldUrl = currentBlobUrlRef.current;
+    if (oldUrl && oldUrl !== url) {
+      const isInCache = Array.from(cacheRef.current.values()).includes(oldUrl);
+      if (!isInCache) URL.revokeObjectURL(oldUrl);
+    }
     setPdfBlobUrl(url);
     currentBlobUrlRef.current = url;
   }, []);
@@ -110,36 +114,41 @@ export function useLatexCompiler({
           setStatus("success");
           setBlobUrl(url);
           setCompilationId(result.compilationId ?? null);
-          setDurationMs(Date.now() - startTime);
-          toast.success("Compilado com sucesso");
+          setDurationMs(result.durationMs ?? (Date.now() - startTime));
+
+          if (result.cached) {
+            toast.success("Compilado (cache do servidor)");
+          } else {
+            toast.success("Compilado com sucesso");
+          }
         } else if (result.status === "success") {
           // Success but no PDF data (shouldn't happen normally)
           setStatus("success");
           setCompilationId(result.compilationId ?? null);
-          setDurationMs(Date.now() - startTime);
+          setDurationMs(result.durationMs ?? (Date.now() - startTime));
           toast.success("Compilado com sucesso");
         } else {
-          const msg = result.errors ?? "Erro de compilacao desconhecido";
+          const msg = result.errors ?? "Erro de compilação desconhecido";
           setStatus("error");
           setError(msg);
-          toast.error("Erro na compilacao", { description: msg });
+          toast.error("Erro na compilação", { description: msg });
         }
       } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Erro inesperado na compilacao";
+          err instanceof Error ? err.message : "Erro inesperado na compilação";
 
         if (msg.includes("Daily compilation limit")) {
           setStatus("quota_exceeded");
-          setError("Limite diario de compilacoes atingido");
-          toast.error("Limite diario atingido", {
-            description: "Faca upgrade do plano para mais compilacoes.",
+          setError("Limite diário de compilações atingido");
+          toast.error("Limite diário atingido", {
+            description: "Faça upgrade do plano para mais compilações.",
           });
         } else if (msg.includes("Rate limit exceeded")) {
           // Per-minute rate limit — keep status retryable
           setStatus("error");
           setError("Aguarde um momento antes de compilar novamente");
           toast.warning("Aguarde um momento", {
-            description: "Muitas compilacoes em sequencia.",
+            description: "Muitas compilações em sequência.",
           });
         } else if (
           msg.toLowerCase().includes("offline") ||
@@ -147,12 +156,12 @@ export function useLatexCompiler({
           msg.toLowerCase().includes("fetch failed")
         ) {
           setStatus("offline");
-          setError("Servidor de compilacao indisponivel");
-          toast.error("Servidor de compilacao offline");
+          setError("Servidor de compilação indisponível");
+          toast.error("Servidor de compilação offline");
         } else {
           setStatus("error");
           setError(msg);
-          toast.error("Erro na compilacao", { description: msg });
+          toast.error("Erro na compilação", { description: msg });
         }
       }
     },

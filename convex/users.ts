@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import { TIER_LIMITS } from "./tierLimits";
 
 export const getOrCreateCurrentUser = mutation({
   args: {},
@@ -31,6 +32,7 @@ export const getOrCreateCurrentUser = mutation({
       lastAiResetDate: today,
       compilesUsedToday: 0,
       lastCompileResetDate: today,
+      storageUsedBytes: 0,
     });
 
     return (await ctx.db.get(userId))!;
@@ -85,7 +87,24 @@ export const create = mutation({
       lastAiResetDate: today,
       compilesUsedToday: 0,
       lastCompileResetDate: today,
+      storageUsedBytes: 0,
     });
+  },
+});
+
+export const updateProfile = mutation({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const trimmed = args.name.trim();
+    if (trimmed.length === 0) throw new Error("Name cannot be empty");
+
+    await ctx.db.patch(args.userId, { name: trimmed });
   },
 });
 
@@ -220,5 +239,61 @@ export const incrementCompiles = internalMutation({
       });
       return newCount;
     }
+  },
+});
+
+// ─── Storage Quota ────────────────────────────────────────────────
+
+export const getStorageUsage = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const usedBytes = user.storageUsedBytes ?? 0;
+    const limits = TIER_LIMITS[user.tier];
+    const limitBytes = limits.storageLimitMB === Infinity
+      ? Infinity
+      : limits.storageLimitMB * 1024 * 1024;
+
+    return {
+      usedBytes,
+      limitBytes,
+      usedMB: Math.round(usedBytes / (1024 * 1024) * 100) / 100,
+      limitMB: limits.storageLimitMB,
+    };
+  },
+});
+
+export const adjustStorageUsage = internalMutation({
+  args: { userId: v.id("users"), deltaBytes: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const current = user.storageUsedBytes ?? 0;
+    const newValue = Math.max(0, current + args.deltaBytes);
+    await ctx.db.patch(args.userId, { storageUsedBytes: newValue });
+    return newValue;
+  },
+});
+
+export const checkStorageLimit = internalQuery({
+  args: { userId: v.id("users"), additionalBytes: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const limits = TIER_LIMITS[user.tier];
+    if (limits.storageLimitMB === Infinity) return { allowed: true };
+
+    const limitBytes = limits.storageLimitMB * 1024 * 1024;
+    const currentBytes = user.storageUsedBytes ?? 0;
+
+    return {
+      allowed: (currentBytes + args.additionalBytes) <= limitBytes,
+      currentBytes,
+      limitBytes,
+    };
   },
 });

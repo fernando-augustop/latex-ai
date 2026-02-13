@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,53 @@ import { fadeIn, fadeInUp, staggerContainer } from "@/lib/motion";
 import { Check, AlertTriangle, Loader2 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMutation, useConvexAuth } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { data: session, isPending } = useSession();
   const user = session?.user;
+  const { isAuthenticated } = useConvexAuth();
 
-  const initials = user?.name
-    ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-    : "U";
+  const getOrCreate = useMutation(api.users.getOrCreateCurrentUser);
+  const updateProfile = useMutation(api.users.updateProfile);
+
+  const [convexUser, setConvexUser] = useState<Doc<"users"> | null>(null);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    getOrCreate().then((u) => {
+      if (!cancelled) {
+        setConvexUser(u);
+        setName(u.name);
+      }
+    }).catch(console.error);
+    return () => { cancelled = true; };
+  }, [isAuthenticated, getOrCreate]);
+
+  async function handleSave() {
+    if (!convexUser || name.trim() === convexUser.name) return;
+    setSaving(true);
+    try {
+      await updateProfile({ userId: convexUser._id, name: name.trim() });
+      setConvexUser({ ...convexUser, name: name.trim() });
+      toast.success("Perfil atualizado!");
+    } catch (err) {
+      toast.error("Erro ao salvar alterações.");
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const displayName = name || user?.name || "Usuário";
+  const initials = displayName
+    .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "U";
 
   return (
     <motion.div
@@ -54,7 +94,7 @@ export default function SettingsPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">{user?.name ?? "Usuário"}</p>
+                  <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground">
                     {user?.email ?? ""}
                   </p>
@@ -65,14 +105,30 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" defaultValue={user?.name ?? ""} />
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input id="email" defaultValue={user?.email ?? ""} disabled />
               </div>
-              <Button size="sm" className="btn-press">
-                Salvar Alterações
+              <Button
+                size="sm"
+                className="btn-press"
+                onClick={handleSave}
+                disabled={saving || name.trim() === (convexUser?.name ?? "")}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Alterações"
+                )}
               </Button>
                 </>
               )}

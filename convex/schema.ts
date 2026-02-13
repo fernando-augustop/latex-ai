@@ -12,6 +12,8 @@ export default defineSchema({
     lastAiResetDate: v.string(),
     compilesUsedToday: v.optional(v.number()),
     lastCompileResetDate: v.optional(v.string()),
+    /** Total storage used across all documents, in bytes */
+    storageUsedBytes: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   projects: defineTable({
@@ -51,6 +53,7 @@ export default defineSchema({
     errors: v.optional(v.string()),
     compiledAt: v.optional(v.number()),
     durationMs: v.optional(v.number()),
+    pdfStorageId: v.optional(v.id("_storage")),
   })
     .index("by_user", ["userId"])
     .index("by_document", ["documentId"])

@@ -30,7 +30,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     hasAi: true,
     hasServerCompile: true,
     maxServerCompilesPerDay: Infinity,
-    maxCompilesPerMinute: 15,
+    maxCompilesPerMinute: Infinity,
     storage: 5000,
   },
   enterprise: {
@@ -40,7 +40,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     hasAi: true,
     hasServerCompile: true,
     maxServerCompilesPerDay: Infinity,
-    maxCompilesPerMinute: 30,
+    maxCompilesPerMinute: Infinity,
     storage: Infinity,
   },
 };
@@ -53,6 +53,17 @@ export function canSendAiMessage(tier: Tier, usedToday: number): boolean {
   const limits = TIER_LIMITS[tier];
   if (!limits.hasAi) return false;
   return usedToday < limits.maxAiMessagesPerDay;
+}
+
+export function canUseStorage(tier: Tier, currentBytes: number, additionalBytes: number): boolean {
+  const limitMB = TIER_LIMITS[tier].storage;
+  if (limitMB === Infinity) return true;
+  const limitBytes = limitMB * 1024 * 1024;
+  return (currentBytes + additionalBytes) <= limitBytes;
+}
+
+export function getStorageLimitMB(tier: Tier): number {
+  return TIER_LIMITS[tier].storage;
 }
 
 export function getRemainingCompiles(tier: Tier, usedToday: number): number {
@@ -105,8 +116,7 @@ export const PRICING: PricingInfo[] = [
     annualMonthlyPrice: 0,
     features: [
       "3 projetos",
-      "3 edições IA por projeto",
-      "Compilações PDF ilimitadas",
+      "Compilação no servidor (15/min)",
       "Editor básico com syntax highlighting",
       "50MB de armazenamento",
     ],
@@ -119,11 +129,9 @@ export const PRICING: PricingInfo[] = [
     features: [
       "Projetos ilimitados",
       "50 mensagens IA/dia",
-      "Compilações ilimitadas",
+      "Compilação no servidor (ilimitada)",
       "Claude Haiku + GPT-4o-mini",
       "5GB de armazenamento",
-      "Histórico de versões",
-      "Export PDF",
     ],
   },
   {
@@ -135,10 +143,10 @@ export const PRICING: PricingInfo[] = [
       "Tudo do Pro",
       "Mensagens IA ilimitadas",
       "Todos os modelos (Sonnet, Opus, GPT-4o)",
-      "Compilação prioritária",
+      "Compilação no servidor (ilimitada)",
       "Armazenamento ilimitado",
       "Suporte prioritário",
-      "API access",
+      "Acesso à API",
     ],
   },
 ];

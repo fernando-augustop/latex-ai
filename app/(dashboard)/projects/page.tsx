@@ -157,27 +157,37 @@ export default function ProjectsPage() {
               <Link href={`/projects/${project._id}`}>
                 <Card className="card-hover-glow group h-full border-border/55 bg-card transition-colors hover:border-primary/40 hover:bg-card">
                   <CardContent className="p-6">
-                    {/* Thumbnail placeholder */}
+                    {/* PDF thumbnail or fallback */}
                     <div className="mb-4 h-32 overflow-hidden rounded-xl border border-border/40 bg-muted/25 p-2.5">
-                      <div
-                        className="h-full rounded-md border border-zinc-300/70 bg-white px-2.5 py-2 text-zinc-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
-                        style={{ fontFamily: '"Times New Roman", "Georgia", serif' }}
-                      >
-                        <p className="truncate text-center text-[9px] font-semibold leading-tight text-zinc-900">
-                          {project.name}
-                        </p>
-                        <div className="mx-auto mt-1 h-px w-12 bg-zinc-300" />
-                        <div className="mt-1.5 space-y-1 text-[8px] leading-[1.35] text-zinc-700">
-                          {buildPreviewLines((project as { previewContent?: string }).previewContent).map((line, idx) => (
-                            <p key={`${project._id}-preview-${idx}`} className="truncate">
-                              {line}
-                            </p>
-                          ))}
-                          {buildPreviewLines((project as { previewContent?: string }).previewContent).length === 0 && (
-                            <p className="text-center text-zinc-500">Sem conteúdo</p>
-                          )}
+                      {(project as { pdfUrl?: string | null }).pdfUrl ? (
+                        <div className="relative h-full w-full overflow-hidden rounded-md border border-zinc-300/70 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
+                          <iframe
+                            src={`${(project as { pdfUrl: string }).pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                            className="pointer-events-none absolute inset-0 h-[400%] w-[400%] origin-top-left scale-25"
+                            title={`Preview de ${project.name}`}
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div
+                          className="h-full rounded-md border border-zinc-300/70 bg-white px-2.5 py-2 text-zinc-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
+                          style={{ fontFamily: '"Times New Roman", "Georgia", serif' }}
+                        >
+                          <p className="truncate text-center text-[9px] font-semibold leading-tight text-zinc-900">
+                            {project.name}
+                          </p>
+                          <div className="mx-auto mt-1 h-px w-12 bg-zinc-300" />
+                          <div className="mt-1.5 space-y-1 text-[8px] leading-[1.35] text-zinc-700">
+                            {buildPreviewLines((project as { previewContent?: string }).previewContent).map((line, idx) => (
+                              <p key={`${project._id}-preview-${idx}`} className="truncate">
+                                {line}
+                              </p>
+                            ))}
+                            {buildPreviewLines((project as { previewContent?: string }).previewContent).length === 0 && (
+                              <p className="text-center text-zinc-500">Sem conteúdo</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <h3 className="truncate font-serif text-xl group-hover:text-primary transition-colors">
                       {project.name}

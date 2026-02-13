@@ -15,6 +15,7 @@ type CompileResult = {
   errors?: string;
   cached: boolean;
   remainingCompiles?: number;
+  durationMs?: number;
 };
 
 // ─── Compile Action ─────────────────────────────────────────────────
@@ -71,7 +72,37 @@ export const compile = action({
       .update(args.source)
       .digest("hex");
 
-    // 5. Create compilation record (with tier for rate-limiting)
+    // 5. Check server-side cache (PDF in Convex storage)
+    const cached = await ctx.runQuery(internal.latex.findCachedCompilation, {
+      documentId: args.documentId,
+      sourceHash,
+    });
+
+    if (cached?.pdfStorageId) {
+      const pdfUrl = await ctx.storage.getUrl(cached.pdfStorageId);
+      if (pdfUrl) {
+        try {
+          const pdfResponse = await fetch(pdfUrl);
+          const pdfBuffer = await pdfResponse.arrayBuffer();
+          const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+          // Rollback the compile count — cache hit doesn't count
+          await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
+          return {
+            compilationId: cached._id,
+            status: "success" as const,
+            pdfBase64,
+            logs: cached.logs,
+            cached: true,
+            remainingCompiles: remaining !== undefined ? remaining + 1 : undefined,
+            durationMs: 0,
+          };
+        } catch {
+          // Storage fetch failed — fall through to recompile
+        }
+      }
+    }
+
+    // 6. Create compilation record (with tier for rate-limiting)
     const compilationId = await ctx.runMutation(
       internal.latex.createCompilation,
       {
@@ -83,13 +114,13 @@ export const compile = action({
       }
     );
 
-    // 6. Mark as compiling
+    // 7. Mark as compiling
     await ctx.runMutation(internal.latex.updateCompilation, {
       compilationId,
       status: "compiling",
     });
 
-    // 7. Call external LaTeX API
+    // 8. Call external LaTeX API
     const apiUrl = process.env.LATEX_API_URL;
     if (!apiUrl) {
       await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
@@ -127,7 +158,11 @@ export const compile = action({
           "Content-Type": "application/json",
           "X-API-Secret": hmac,
         },
-        body: JSON.stringify({ source: args.source, engine }),
+        body: JSON.stringify({
+          source: args.source,
+          engine,
+          document_id: args.documentId,
+        }),
       });
     } catch (err) {
       const errorMsg =
@@ -159,7 +194,7 @@ export const compile = action({
     const result = await response.json();
     const durationMs = Date.now() - startTime;
 
-    // 8. Handle error response
+    // 9. Handle error response
     if (!response.ok || result.error) {
       await ctx.runMutation(internal.latex.updateCompilation, {
         compilationId,
@@ -178,15 +213,27 @@ export const compile = action({
       };
     }
 
-    // 9. Update compilation record (no PDF storage)
+    // 10. Store PDF in Convex storage for caching
+    let pdfStorageId: Id<"_storage"> | undefined;
+    try {
+      const pdfBytes = Buffer.from(result.pdf, "base64");
+      pdfStorageId = await ctx.storage.store(
+        new Blob([pdfBytes], { type: "application/pdf" })
+      );
+    } catch {
+      // Storage failed — continue without caching
+    }
+
+    // 11. Update compilation record
     await ctx.runMutation(internal.latex.updateCompilation, {
       compilationId,
       status: "success",
       logs: result.logs,
       durationMs,
+      ...(pdfStorageId ? { pdfStorageId } : {}),
     });
 
-    // 10. Update document compile timestamp
+    // 12. Update document compile timestamp
     await ctx.runMutation(internal.latex.updateDocumentCompileTime, {
       documentId: args.documentId,
     });
@@ -198,6 +245,7 @@ export const compile = action({
       logs: result.logs,
       cached: false,
       remainingCompiles: remaining,
+      durationMs: result.duration_ms,
     };
   },
 });

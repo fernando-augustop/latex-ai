@@ -73,6 +73,7 @@ export const updateCompilation = internalMutation({
     logs: v.optional(v.string()),
     errors: v.optional(v.string()),
     durationMs: v.optional(v.number()),
+    pdfStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { compilationId, status, ...rest } = args;
@@ -81,6 +82,7 @@ export const updateCompilation = internalMutation({
     if (rest.logs !== undefined) patch.logs = rest.logs;
     if (rest.errors !== undefined) patch.errors = rest.errors;
     if (rest.durationMs !== undefined) patch.durationMs = rest.durationMs;
+    if (rest.pdfStorageId !== undefined) patch.pdfStorageId = rest.pdfStorageId;
     if (status === "success" || status === "error") {
       patch.compiledAt = Date.now();
     }
@@ -117,5 +119,38 @@ export const getDocumentCompilations = query({
       .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .order("desc")
       .take(10);
+  },
+});
+
+// ─── Cleanup ────────────────────────────────────────────────────────
+
+export const cleanupOldPdfStorage = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    // Find compilations older than 7 days that have stored PDFs
+    const oldCompilations = await ctx.db
+      .query("compilations")
+      .filter((q) =>
+        q.and(
+          q.lt(q.field("_creationTime"), sevenDaysAgo),
+          q.neq(q.field("pdfStorageId"), undefined)
+        )
+      )
+      .take(100);
+
+    let deleted = 0;
+    for (const compilation of oldCompilations) {
+      if (compilation.pdfStorageId) {
+        await ctx.storage.delete(compilation.pdfStorageId);
+        await ctx.db.patch(compilation._id, { pdfStorageId: undefined });
+        deleted++;
+      }
+    }
+
+    if (deleted > 0) {
+      console.log(`[latex] Cleaned up ${deleted} old PDF storage entries`);
+    }
   },
 });

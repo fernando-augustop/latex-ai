@@ -32,10 +32,31 @@ export const listByUser = query({
 
         const doc = mainDoc ?? fallbackDoc;
 
+        // Get the latest successful compilation PDF URL
+        let pdfUrl: string | null = null;
+        if (doc) {
+          const latestCompilation = await ctx.db
+            .query("compilations")
+            .withIndex("by_document", (q) => q.eq("documentId", doc._id))
+            .filter((q) =>
+              q.and(
+                q.eq(q.field("status"), "success"),
+                q.neq(q.field("pdfStorageId"), undefined)
+              )
+            )
+            .order("desc")
+            .first();
+
+          if (latestCompilation?.pdfStorageId) {
+            pdfUrl = await ctx.storage.getUrl(latestCompilation.pdfStorageId);
+          }
+        }
+
         return {
           ...project,
           previewContent: doc?.content ?? "",
           previewFilename: doc?.filename ?? null,
+          pdfUrl,
         };
       })
     );
