@@ -10,6 +10,8 @@ export default defineSchema({
     createdAt: v.number(),
     aiMessagesUsedToday: v.number(),
     lastAiResetDate: v.string(),
+    compilesUsedToday: v.optional(v.number()),
+    lastCompileResetDate: v.optional(v.string()),
   }).index("by_email", ["email"]),
 
   projects: defineTable({

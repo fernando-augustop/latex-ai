@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Toolbar } from "@/components/editor/toolbar";
 import { EditorLayout } from "@/components/editor/editor-layout";
-import { preprocessForPreview } from "@/lib/latex/compiler";
 import { useLatexCompiler } from "@/hooks/use-latex-compiler";
 import { TIER_LIMITS, type Tier } from "@/lib/tier-limits";
+import { detectPageFormat } from "@/lib/latex/page-formats";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -25,18 +25,16 @@ export default function EditorPage() {
 
   const [projectName, setProjectName] = useState("");
   const [value, setValue] = useState("");
-  const [htmlContent, setHtmlContent] = useState<string | null>(null);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [compilationError, setCompilationError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [activeDocId, setActiveDocId] = useState<Id<"documents"> | null>(null);
-  const [previewMode, setPreviewMode] = useState<"live" | "pdf">("live");
   const [engine, setEngine] = useState("tectonic");
   const [userTier, setUserTier] = useState<Tier>("free");
+  const [userId, setUserId] = useState<string>("");
 
-  const hasServerCompile = TIER_LIMITS[userTier].hasServerCompile;
+  const tierLimits = TIER_LIMITS[userTier];
+  const maxCompilesPerDay = tierLimits.maxServerCompilesPerDay;
+  const pageFormat = useMemo(() => detectPageFormat(value), [value]);
 
-  const compileRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { isAuthenticated } = useConvexAuth();
@@ -45,7 +43,10 @@ export default function EditorPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
     currentUser().then((user) => {
-      if (user) setUserTier(user.tier as Tier);
+      if (user) {
+        setUserTier(user.tier as Tier);
+        setUserId(user._id);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
@@ -55,10 +56,10 @@ export default function EditorPage() {
     pdfBlobUrl: serverPdfBlobUrl,
     error: serverError,
     durationMs: serverDurationMs,
+    remainingCompiles,
     compileServer,
   } = useLatexCompiler({
     documentId: activeDocId,
-    hasServerCompile,
   });
 
   // Redirect if project not found
@@ -86,48 +87,13 @@ export default function EditorPage() {
     }
   }, [documents, initialized]);
 
-
-  const compile = useCallback(async (source: string, showToast = false) => {
-    setIsCompiling(true);
-    setCompilationError(null);
-    try {
-      const { parse, HtmlGenerator } = await import("latex.js");
-      const preprocessed = preprocessForPreview(source);
-      const generator = new HtmlGenerator({ hyphenate: false });
-      const doc = parse(preprocessed, { generator });
-      const domFragment = doc.domFragment();
-
-      const container = document.createElement("div");
-      container.appendChild(domFragment);
-      const html = container.innerHTML;
-      setHtmlContent(html);
-
-      if (showToast) {
-        toast.success("Compilado com sucesso");
-      }
-
-      return html;
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Erro de compilação desconhecido";
-      setCompilationError(message);
-      setHtmlContent(null);
-      if (showToast) {
-        toast.error("Erro na compilação", { description: message });
-      }
-      return null;
-    } finally {
-      setIsCompiling(false);
-    }
-  }, []);
-
-  // Initial compile once content is loaded (preview only, no PDF)
+  // Initial server compile once content AND user data are loaded
   useEffect(() => {
-    if (initialized && value) {
-      compile(value);
+    if (initialized && value && activeDocId && userId) {
+      compileServer(value, engine);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized]);
+  }, [initialized, userId]);
 
   const handleChange = useCallback(
     (newValue: string) => {
@@ -140,30 +106,15 @@ export default function EditorPage() {
           updateContent({ documentId: activeDocId, content: newValue });
         }, 2000);
       }
-
-      // Debounced compile (preview only, no PDF generation)
-      if (compileRef.current) clearTimeout(compileRef.current);
-      compileRef.current = setTimeout(() => {
-        compile(newValue);
-      }, 1500);
     },
-    [activeDocId, compile, updateContent]
+    [activeDocId, updateContent]
   );
 
   async function handleCompile() {
-    if (compileRef.current) clearTimeout(compileRef.current);
-
-    // Client-side: generate preview
-    await compile(value, true);
-
-    // Server-side: higher quality compile (Pro/Enterprise)
-    if (hasServerCompile) {
-      compileServer(value, engine);
-    }
+    compileServer(value, engine);
   }
 
   async function handleDownload() {
-    // Pro/Enterprise: download server-compiled PDF directly
     if (serverPdfBlobUrl) {
       const a = document.createElement("a");
       a.href = serverPdfBlobUrl;
@@ -174,15 +125,9 @@ export default function EditorPage() {
       return;
     }
 
-    // Free tier: use browser print dialog (Save as PDF)
-    const html = htmlContent ?? await compile(value);
-    if (!html) {
-      toast.error("Compile o documento primeiro para baixar o PDF");
-      return;
-    }
-
-    const { downloadPdfViaPrint } = await import("@/lib/pdf-generator");
-    downloadPdfViaPrint(html, projectName || "document");
+    // No PDF yet — trigger compile and let user know
+    toast.info("Compilando PDF...", { description: "O download iniciara apos a compilacao." });
+    compileServer(value, engine);
   }
 
   function handleProjectNameChange(name: string) {
@@ -199,18 +144,18 @@ export default function EditorPage() {
           if (saveRef.current) clearTimeout(saveRef.current);
           updateContent({ documentId: activeDocId, content: value });
         }
-        handleCompile();
+        compileServer(value, engine);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDocId, value, engine, hasServerCompile, compile, compileServer, updateContent]);
+  }, [activeDocId, value, engine, compileServer, updateContent]);
 
   // Loading state
   if (!initialized) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm">Carregando projeto...</p>
@@ -220,33 +165,32 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background/70">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background/70">
       <Toolbar
         projectName={projectName}
         onProjectNameChange={handleProjectNameChange}
         onCompile={handleCompile}
         onDownload={handleDownload}
-        isCompiling={isCompiling}
+        isCompiling={serverStatus === "compiling"}
         serverStatus={serverStatus}
         serverDurationMs={serverDurationMs}
         serverError={serverError}
-        hasServerCompile={hasServerCompile}
-        engine={engine}
-        onEngineChange={setEngine}
+        remainingCompiles={remainingCompiles}
+        maxCompilesPerDay={maxCompilesPerDay === Infinity ? null : maxCompilesPerDay}
       />
       <div className="flex-1 overflow-hidden">
         <EditorLayout
           value={value}
           onChange={handleChange}
-          htmlContent={htmlContent}
-          isCompiling={isCompiling}
-          compilationError={compilationError}
-          previewMode={previewMode}
-          onPreviewModeChange={setPreviewMode}
           serverPdfBlobUrl={serverPdfBlobUrl}
           serverCompiling={serverStatus === "compiling"}
           serverError={serverError}
-          hasServerCompile={hasServerCompile}
+          remainingCompiles={remainingCompiles}
+          maxCompilesPerDay={maxCompilesPerDay === Infinity ? null : maxCompilesPerDay}
+          pageFormat={pageFormat}
+          documentId={activeDocId ?? ""}
+          userId={userId}
+          tier={userTier}
         />
       </div>
     </div>

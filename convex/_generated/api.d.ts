@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chatMessages from "../chatMessages.js";
 import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
@@ -27,6 +28,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  chatMessages: typeof chatMessages;
   crons: typeof crons;
   documents: typeof documents;
   http: typeof http;

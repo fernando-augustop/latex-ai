@@ -1,45 +1,55 @@
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
 import { getModelForTier } from '@/lib/ai/providers';
 import { buildSystemPrompt } from '@/lib/ai/latex-system-prompt';
+import {
+  isAuthenticated,
+  fetchAuthMutation,
+  fetchAuthQuery,
+} from '@/lib/auth-server';
+import { api } from '@/convex/_generated/api';
 import type { Tier } from '@/lib/ai/types';
+import type { Id } from '@/convex/_generated/dataModel';
 
-const chatRequestSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(['user', 'assistant', 'system']),
-      content: z.string(),
-    })
-  ),
-  modelId: z.string(),
-  documentContent: z.string().optional().default(''),
-  tier: z.enum(['free', 'pro', 'enterprise']),
-});
+export const maxDuration = 30;
 
 const PRO_DAILY_LIMIT = 50;
 
-// In-memory daily message counter (replace with DB in production)
-const dailyUsage = new Map<string, { count: number; date: string }>();
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
-function checkDailyLimit(userId: string): boolean {
-  const today = new Date().toISOString().slice(0, 10);
-  const usage = dailyUsage.get(userId);
+const chatRequestSchema = z.object({
+  messages: z.array(z.any()),
+  modelId: z.string(),
+  documentContent: z.string().optional().default(''),
+  documentId: z.string(),
+  tier: z.enum(['free', 'pro', 'enterprise']),
+});
 
-  if (!usage || usage.date !== today) {
-    dailyUsage.set(userId, { count: 1, date: today });
-    return true;
+function extractTextFromUIMessage(message: unknown): string {
+  if (typeof message !== 'object' || message === null) return '';
+  const msg = message as Record<string, unknown>;
+
+  if (typeof msg.content === 'string') {
+    return msg.content;
   }
-
-  if (usage.count >= PRO_DAILY_LIMIT) {
-    return false;
+  if (Array.isArray(msg.parts)) {
+    return msg.parts
+      .filter((p: unknown) => typeof p === 'object' && p !== null && (p as Record<string, unknown>).type === 'text')
+      .map((p: unknown) => (p as Record<string, unknown>).text as string)
+      .join('\n');
   }
-
-  usage.count += 1;
-  return true;
+  return '';
 }
 
 export async function POST(req: Request) {
   try {
+    if (!(await isAuthenticated())) {
+      return Response.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
     const body: unknown = await req.json();
     const parsed = chatRequestSchema.safeParse(body);
 
@@ -50,21 +60,31 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages, modelId, documentContent, tier } = parsed.data;
+    const { messages, modelId, documentContent, documentId, tier } =
+      parsed.data;
 
-    // Free tier cannot use AI
     if (tier === 'free') {
       return Response.json(
-        { error: 'AI chat is not available on the Free tier. Please upgrade to Pro or Enterprise.' },
+        {
+          error:
+            'AI chat is not available on the Free tier. Please upgrade to Pro or Enterprise.',
+        },
         { status: 403 }
       );
     }
 
+    // Get current user from Convex
+    const user = await fetchAuthMutation(
+      api.users.getOrCreateCurrentUser,
+      {}
+    );
+
     // Check daily limit for Pro tier
     if (tier === 'pro') {
-      // TODO: Replace with real user ID from auth session
-      const userId = 'anonymous';
-      if (!checkDailyLimit(userId)) {
+      const usage = await fetchAuthQuery(api.users.getAiUsage, {
+        userId: user._id,
+      });
+      if (usage >= PRO_DAILY_LIMIT) {
         return Response.json(
           {
             error: `Daily message limit reached (${PRO_DAILY_LIMIT} messages/day). Upgrade to Enterprise for unlimited messages.`,
@@ -79,20 +99,52 @@ export async function POST(req: Request) {
 
     if (!modelConfig) {
       return Response.json(
-        { error: `Model "${modelId}" is not available for the ${tier} tier.` },
+        {
+          error: `Model "${modelId}" is not available for the ${tier} tier.`,
+        },
         { status: 403 }
       );
+    }
+
+    // Save user message to Convex (last message in the array)
+    const lastMessage = messages[messages.length - 1];
+    const userText = extractTextFromUIMessage(lastMessage);
+    if (userText) {
+      await fetchAuthMutation(api.chatMessages.sendMessage, {
+        documentId: documentId as Id<'documents'>,
+        userId: user._id,
+        role: 'user' as const,
+        content: userText,
+      });
     }
 
     const systemPrompt = buildSystemPrompt(documentContent);
 
     const result = streamText({
-      model: modelConfig.provider.languageModel(modelConfig.modelId),
+      model: openrouter.chat(modelConfig.openRouterId),
       system: systemPrompt,
-      messages,
+      messages: await convertToModelMessages(messages as UIMessage[]),
+      onFinish: async ({ text }) => {
+        try {
+          // Save assistant message to Convex
+          await fetchAuthMutation(api.chatMessages.sendMessage, {
+            documentId: documentId as Id<'documents'>,
+            userId: user._id,
+            role: 'assistant' as const,
+            content: text,
+            model: modelId,
+          });
+          // Increment AI usage counter
+          await fetchAuthMutation(api.users.incrementAiUsage, {
+            userId: user._id,
+          });
+        } catch (err) {
+          console.error('Failed to save assistant message or increment usage:', err);
+        }
+      },
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Internal server error';

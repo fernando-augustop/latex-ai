@@ -44,6 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# firecrawl cached/scraped data
+.firecrawl/
+
 # convex compiled output (esbuild conflict prevention)
 convex/*.js
 !convex/_generated/*.js

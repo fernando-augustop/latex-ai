@@ -7,6 +7,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching } from "@codemirror/language";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { latex } from "codemirror-lang-latex";
+import { latexSyntaxHighlighting } from "./latex-highlight";
 
 interface LatexEditorProps {
   value: string;
@@ -19,6 +20,10 @@ const darkTheme = EditorView.theme(
       backgroundColor: "oklch(0.17 0.015 235 / 72%)",
       color: "oklch(0.94 0.01 105)",
       fontSize: "14px",
+      height: "100%",
+    },
+    ".cm-scroller": {
+      overflow: "auto",
     },
     ".cm-content": {
       fontFamily: "var(--font-ibm-plex-mono), monospace",
@@ -71,6 +76,7 @@ export function LatexEditor({ value, onChange }: LatexEditorProps) {
         highlightSelectionMatches(),
         history(),
         latex(),
+        latexSyntaxHighlighting,
         darkTheme,
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         EditorView.updateListener.of((update) => {
@@ -96,5 +102,5 @@ export function LatexEditor({ value, onChange }: LatexEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <div ref={containerRef} className="h-full overflow-auto bg-card/35" />;
+  return <div ref={containerRef} className="h-full overflow-hidden bg-card/35" />;
 }

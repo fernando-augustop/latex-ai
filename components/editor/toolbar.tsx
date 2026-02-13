@@ -11,13 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -40,12 +33,11 @@ interface ToolbarProps {
   onCompile: () => void;
   onDownload: () => void;
   isCompiling: boolean;
-  serverStatus?: "idle" | "compiling" | "success" | "error" | "offline";
+  serverStatus?: "idle" | "compiling" | "success" | "error" | "offline" | "quota_exceeded";
   serverDurationMs?: number | null;
   serverError?: string | null;
-  hasServerCompile?: boolean;
-  engine?: string;
-  onEngineChange?: (engine: string) => void;
+  remainingCompiles?: number | null;
+  maxCompilesPerDay?: number | null;
 }
 
 export function Toolbar({
@@ -57,12 +49,13 @@ export function Toolbar({
   serverStatus,
   serverDurationMs,
   serverError,
-  hasServerCompile,
-  engine,
-  onEngineChange,
+  remainingCompiles,
+  maxCompilesPerDay,
 }: ToolbarProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(projectName);
+
+  const isQuotaExhausted = serverStatus === "quota_exceeded";
 
   function handleSave() {
     onProjectNameChange(name);
@@ -124,31 +117,16 @@ export function Toolbar({
           )}
         </div>
 
-        {/* Center: compilation status */}
-        <div className="flex flex-1 items-center justify-center">
-          {hasServerCompile && (
-            <CompilationStatus
-              status={serverStatus ?? "idle"}
-              durationMs={serverDurationMs ?? null}
-              error={serverError ?? null}
-            />
-          )}
-        </div>
+        <div className="flex flex-1" />
 
         <div className="flex items-center gap-2">
-          {hasServerCompile && onEngineChange && (
-            <Select value={engine} onValueChange={onEngineChange}>
-              <SelectTrigger className="h-9 w-[130px] rounded-full text-xs border-border/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tectonic">Tectonic</SelectItem>
-                <SelectItem value="pdflatex">pdfLaTeX</SelectItem>
-                <SelectItem value="xelatex">XeLaTeX</SelectItem>
-                <SelectItem value="lualatex">LuaLaTeX</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          <CompilationStatus
+            status={serverStatus ?? "idle"}
+            durationMs={serverDurationMs ?? null}
+            error={serverError ?? null}
+            remainingCompiles={remainingCompiles}
+            maxCompilesPerDay={maxCompilesPerDay}
+          />
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -157,7 +135,7 @@ export function Toolbar({
                 size="sm"
                 className="btn-press h-9 gap-1.5 rounded-full border border-emerald/60 bg-emerald px-4 text-emerald-foreground shadow-[0_10px_22px_oklch(0.05_0.02_230/38%)] hover:bg-emerald/92 hover:text-emerald-foreground disabled:cursor-not-allowed disabled:opacity-80 disabled:bg-emerald/75 disabled:text-emerald-foreground"
                 onClick={onCompile}
-                disabled={isCompiling}
+                disabled={isCompiling || isQuotaExhausted}
               >
                 {isCompiling ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -167,7 +145,11 @@ export function Toolbar({
                 Compilar
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Compilar documento (Ctrl+Enter)</TooltipContent>
+            <TooltipContent>
+              {isQuotaExhausted
+                ? "Limite diário de compilações atingido"
+                : "Compilar documento (Ctrl+Enter)"}
+            </TooltipContent>
           </Tooltip>
 
           <Tooltip>

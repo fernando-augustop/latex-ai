@@ -6,11 +6,10 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
-type CompilerStatus = "idle" | "compiling" | "success" | "error" | "offline";
+type CompilerStatus = "idle" | "compiling" | "success" | "error" | "offline" | "quota_exceeded";
 
 interface UseLatexCompilerOptions {
   documentId: Id<"documents"> | null;
-  hasServerCompile: boolean;
 }
 
 interface UseLatexCompilerReturn {
@@ -19,6 +18,7 @@ interface UseLatexCompilerReturn {
   compilationId: Id<"compilations"> | null;
   error: string | null;
   durationMs: number | null;
+  remainingCompiles: number | null;
   compileServer: (source: string, engine?: string) => Promise<void>;
 }
 
@@ -33,13 +33,13 @@ async function hashSource(source: string): Promise<string> {
 
 export function useLatexCompiler({
   documentId,
-  hasServerCompile,
 }: UseLatexCompilerOptions): UseLatexCompilerReturn {
   const [status, setStatus] = useState<CompilerStatus>("idle");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [compilationId, setCompilationId] = useState<Id<"compilations"> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
+  const [remainingCompiles, setRemainingCompiles] = useState<number | null>(null);
 
   // Track current blob URL for revocation
   const currentBlobUrlRef = useRef<string | null>(null);
@@ -67,11 +67,6 @@ export function useLatexCompiler({
 
   const compileServer = useCallback(
     async (source: string, engine?: string) => {
-      if (!hasServerCompile) {
-        toast.error("Compilação server-side requer plano Pro ou Enterprise");
-        return;
-      }
-
       if (!documentId) {
         toast.error("Nenhum documento selecionado");
         return;
@@ -94,6 +89,10 @@ export function useLatexCompiler({
 
       try {
         const result = await compile({ documentId, source, engine });
+
+        if (result.remainingCompiles !== undefined) {
+          setRemainingCompiles(result.remainingCompiles ?? null);
+        }
 
         if (result.status === "success" && result.pdfBase64) {
           // Decode base64 → blob URL
@@ -120,34 +119,47 @@ export function useLatexCompiler({
           setDurationMs(Date.now() - startTime);
           toast.success("Compilado com sucesso");
         } else {
-          const msg = result.errors ?? "Erro de compilação desconhecido";
+          const msg = result.errors ?? "Erro de compilacao desconhecido";
           setStatus("error");
           setError(msg);
-          toast.error("Erro na compilação", { description: msg });
+          toast.error("Erro na compilacao", { description: msg });
         }
       } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Erro inesperado na compilação";
+          err instanceof Error ? err.message : "Erro inesperado na compilacao";
 
-        if (
+        if (msg.includes("Daily compilation limit")) {
+          setStatus("quota_exceeded");
+          setError("Limite diario de compilacoes atingido");
+          toast.error("Limite diario atingido", {
+            description: "Faca upgrade do plano para mais compilacoes.",
+          });
+        } else if (msg.includes("Rate limit exceeded")) {
+          // Per-minute rate limit — keep status retryable
+          setStatus("error");
+          setError("Aguarde um momento antes de compilar novamente");
+          toast.warning("Aguarde um momento", {
+            description: "Muitas compilacoes em sequencia.",
+          });
+        } else if (
           msg.toLowerCase().includes("offline") ||
           msg.includes("ECONNREFUSED") ||
           msg.toLowerCase().includes("fetch failed")
         ) {
           setStatus("offline");
-          setError("Servidor de compilação indisponível");
-          toast.error("Servidor de compilação offline");
+          setError("Servidor de compilacao indisponivel");
+          toast.error("Servidor de compilacao offline");
         } else {
           setStatus("error");
           setError(msg);
-          toast.error("Erro na compilação", { description: msg });
+          toast.error("Erro na compilacao", { description: msg });
         }
       }
     },
-    [compile, documentId, hasServerCompile, setBlobUrl]
+    [compile, documentId, setBlobUrl]
   );
 
-  return { status, pdfBlobUrl, compilationId, error, durationMs, compileServer };
+  return { status, pdfBlobUrl, compilationId, error, durationMs, remainingCompiles, compileServer };
 }
 
 export type { CompilerStatus, UseLatexCompilerOptions, UseLatexCompilerReturn };

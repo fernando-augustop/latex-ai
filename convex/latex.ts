@@ -4,6 +4,7 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import { TIER_LIMITS, type Tier } from "./tierLimits";
 
 // ─── Internal Queries ───────────────────────────────────────────────
 
@@ -32,9 +33,13 @@ export const createCompilation = internalMutation({
     documentId: v.id("documents"),
     sourceHash: v.string(),
     engine: v.optional(v.string()),
+    tier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Rate limit: max 10 compilations per user in last 60 seconds
+    const tier = (args.tier ?? "free") as Tier;
+    const maxPerMinute = TIER_LIMITS[tier]?.maxCompilesPerMinute ?? 5;
+
+    // Rate limit: max N compilations per user in last 60 seconds (tier-specific)
     const oneMinuteAgo = Date.now() - 60_000;
     const recentCompilations = await ctx.db
       .query("compilations")
@@ -42,7 +47,7 @@ export const createCompilation = internalMutation({
       .filter((q) => q.gte(q.field("_creationTime"), oneMinuteAgo))
       .collect();
 
-    if (recentCompilations.length >= 10) {
+    if (recentCompilations.length >= maxPerMinute) {
       throw new Error("Rate limit exceeded: too many compilations. Please wait a moment.");
     }
 

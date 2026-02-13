@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 
 export const getOrCreateCurrentUser = mutation({
   args: {},
@@ -29,6 +29,8 @@ export const getOrCreateCurrentUser = mutation({
       createdAt: Date.now(),
       aiMessagesUsedToday: 0,
       lastAiResetDate: today,
+      compilesUsedToday: 0,
+      lastCompileResetDate: today,
     });
 
     return (await ctx.db.get(userId))!;
@@ -81,6 +83,8 @@ export const create = mutation({
       createdAt: Date.now(),
       aiMessagesUsedToday: 0,
       lastAiResetDate: today,
+      compilesUsedToday: 0,
+      lastCompileResetDate: today,
     });
   },
 });
@@ -155,5 +159,66 @@ export const resetAiUsage = mutation({
       aiMessagesUsedToday: 0,
       lastAiResetDate: today,
     });
+  },
+});
+
+// ─── Compile Quota ─────────────────────────────────────────────────
+
+export const getCompilesToday = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    if ((user.lastCompileResetDate ?? "") !== today) {
+      return 0;
+    }
+
+    return user.compilesUsedToday ?? 0;
+  },
+});
+
+export const decrementCompiles = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return;
+
+    const current = user.compilesUsedToday ?? 0;
+    if (current > 0) {
+      await ctx.db.patch(args.userId, {
+        compilesUsedToday: current - 1,
+      });
+    }
+  },
+});
+
+export const incrementCompiles = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    if ((user.lastCompileResetDate ?? "") !== today) {
+      await ctx.db.patch(args.userId, {
+        compilesUsedToday: 1,
+        lastCompileResetDate: today,
+      });
+      return 1;
+    } else {
+      const newCount = (user.compilesUsedToday ?? 0) + 1;
+      await ctx.db.patch(args.userId, {
+        compilesUsedToday: newCount,
+      });
+      return newCount;
+    }
   },
 });

@@ -10,33 +10,35 @@ import { LatexEditor } from "./latex-editor";
 import { PdfViewer } from "./pdf-viewer";
 import { AiChatPanel } from "./ai-chat-panel";
 import { Code2, Sparkles } from "lucide-react";
+import { type PageFormat } from "@/lib/latex/page-formats";
+import type { Tier } from "@/lib/ai/types";
 
 interface EditorLayoutProps {
   value: string;
   onChange: (value: string) => void;
-  htmlContent: string | null;
-  isCompiling: boolean;
-  compilationError: string | null;
-  previewMode: "live" | "pdf";
-  onPreviewModeChange: (mode: "live" | "pdf") => void;
   serverPdfBlobUrl: string | null;
   serverCompiling: boolean;
   serverError: string | null;
-  hasServerCompile: boolean;
+  remainingCompiles: number | null;
+  maxCompilesPerDay: number | null;
+  pageFormat?: PageFormat;
+  documentId: string;
+  userId: string;
+  tier: Tier;
 }
 
 export function EditorLayout({
   value,
   onChange,
-  htmlContent,
-  isCompiling,
-  compilationError,
-  previewMode,
-  onPreviewModeChange,
   serverPdfBlobUrl,
   serverCompiling,
   serverError,
-  hasServerCompile,
+  remainingCompiles,
+  maxCompilesPerDay,
+  pageFormat,
+  documentId,
+  userId,
+  tier,
 }: EditorLayoutProps) {
   function handleApplyCode(code: string) {
     // Append code to the editor before \end{document} or at the end
@@ -54,7 +56,7 @@ export function EditorLayout({
     <ResizablePanelGroup orientation="horizontal" className="h-full bg-background/70">
       {/* Left panel: Editor + Chat tabs */}
       <ResizablePanel defaultSize={50} minSize={30}>
-        <Tabs defaultValue="editor" className="flex h-full flex-col">
+        <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col">
           <TabsList className="h-10 w-full justify-start rounded-none border-b border-border/45 bg-card/70 px-2 backdrop-blur-sm">
             <TabsTrigger
               value="editor"
@@ -71,11 +73,17 @@ export function EditorLayout({
               Chat IA
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="editor" className="flex-1 mt-0 overflow-hidden">
+          <TabsContent value="editor" className="flex-1 min-h-0 mt-0 overflow-hidden">
             <LatexEditor value={value} onChange={onChange} />
           </TabsContent>
-          <TabsContent value="chat" className="flex-1 mt-0 overflow-hidden">
-            <AiChatPanel onApplyCode={handleApplyCode} />
+          <TabsContent value="chat" className="flex-1 min-h-0 mt-0 overflow-hidden">
+            <AiChatPanel
+              onApplyCode={handleApplyCode}
+              documentContent={value}
+              documentId={documentId}
+              userId={userId}
+              tier={tier}
+            />
           </TabsContent>
         </Tabs>
       </ResizablePanel>
@@ -85,15 +93,12 @@ export function EditorLayout({
       {/* Right panel: PDF viewer */}
       <ResizablePanel defaultSize={50} minSize={25}>
         <PdfViewer
-          htmlContent={htmlContent}
-          isCompiling={isCompiling}
-          error={compilationError}
-          previewMode={previewMode}
-          onPreviewModeChange={onPreviewModeChange}
           serverPdfBlobUrl={serverPdfBlobUrl}
           serverCompiling={serverCompiling}
           serverError={serverError}
-          hasServerCompile={hasServerCompile}
+          remainingCompiles={remainingCompiles}
+          maxCompilesPerDay={maxCompilesPerDay}
+          pageFormat={pageFormat}
         />
       </ResizablePanel>
     </ResizablePanelGroup>

@@ -6,6 +6,8 @@ export interface TierLimits {
   maxAiMessagesPerDay: number;
   hasAi: boolean;
   hasServerCompile: boolean;
+  maxServerCompilesPerDay: number;
+  maxCompilesPerMinute: number;
   /** Storage limit in MB */
   storage: number;
 }
@@ -16,7 +18,9 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxAiEditsPerProject: 3,
     maxAiMessagesPerDay: 0,
     hasAi: false,
-    hasServerCompile: false,
+    hasServerCompile: true,
+    maxServerCompilesPerDay: Infinity,
+    maxCompilesPerMinute: 15,
     storage: 50,
   },
   pro: {
@@ -25,6 +29,8 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxAiMessagesPerDay: 50,
     hasAi: true,
     hasServerCompile: true,
+    maxServerCompilesPerDay: Infinity,
+    maxCompilesPerMinute: 15,
     storage: 5000,
   },
   enterprise: {
@@ -33,6 +39,8 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxAiMessagesPerDay: Infinity,
     hasAi: true,
     hasServerCompile: true,
+    maxServerCompilesPerDay: Infinity,
+    maxCompilesPerMinute: 30,
     storage: Infinity,
   },
 };
@@ -45,6 +53,12 @@ export function canSendAiMessage(tier: Tier, usedToday: number): boolean {
   const limits = TIER_LIMITS[tier];
   if (!limits.hasAi) return false;
   return usedToday < limits.maxAiMessagesPerDay;
+}
+
+export function getRemainingCompiles(tier: Tier, usedToday: number): number {
+  const max = TIER_LIMITS[tier].maxServerCompilesPerDay;
+  if (max === Infinity) return Infinity;
+  return Math.max(0, max - usedToday);
 }
 
 export function getAvailableModels(tier: Tier): string[] {
@@ -91,9 +105,9 @@ export const PRICING: PricingInfo[] = [
     annualMonthlyPrice: 0,
     features: [
       "3 projetos",
-      "3 edicoes IA por projeto",
-      "Preview client-side",
-      "Editor basico com syntax highlighting",
+      "3 edições IA por projeto",
+      "Compilações PDF ilimitadas",
+      "Editor básico com syntax highlighting",
       "50MB de armazenamento",
     ],
   },
@@ -105,10 +119,10 @@ export const PRICING: PricingInfo[] = [
     features: [
       "Projetos ilimitados",
       "50 mensagens IA/dia",
-      "Compilacao server-side (PDF real)",
+      "Compilações ilimitadas",
       "Claude Haiku + GPT-4o-mini",
       "5GB de armazenamento",
-      "Historico de versoes",
+      "Histórico de versões",
       "Export PDF",
     ],
   },
@@ -121,9 +135,9 @@ export const PRICING: PricingInfo[] = [
       "Tudo do Pro",
       "Mensagens IA ilimitadas",
       "Todos os modelos (Sonnet, Opus, GPT-4o)",
-      "Compilacao prioritaria",
+      "Compilação prioritária",
       "Armazenamento ilimitado",
-      "Suporte prioritario",
+      "Suporte prioritário",
       "API access",
     ],
   },
