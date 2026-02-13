@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NewProjectDialog } from "@/components/editor/new-project-dialog";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
-import { FileText, Clock, AlertTriangle, FolderOpen } from "lucide-react";
+import { Clock, AlertTriangle, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -15,9 +15,27 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TIER_LIMITS } from "@/lib/tier-limits";
 
+function buildPreviewLines(source: string | undefined): string[] {
+  if (!source) return [];
+
+  return source
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("%"))
+    .map((line) =>
+      line
+        .replace(/\\[a-zA-Z]+\*?(?:\[[^\]]*\])?/g, "")
+        .replace(/[{}$]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    )
+    .filter((line) => line.length > 0)
+    .slice(0, 4);
+}
+
 function ProjectCardSkeleton() {
   return (
-    <Card className="border-border/55 bg-card/70">
+    <Card className="border-border/55 bg-card">
       <CardContent className="p-6">
         <Skeleton className="mb-4 h-32 w-full rounded-md" />
         <Skeleton className="h-5 w-3/4" />
@@ -137,11 +155,29 @@ export default function ProjectsPage() {
           {projects.map((project) => (
             <motion.div key={project._id} variants={fadeInUp}>
               <Link href={`/projects/${project._id}`}>
-                <Card className="card-hover-glow group h-full border-border/55 bg-card/75 transition-colors hover:border-primary/40 hover:bg-card/95">
+                <Card className="card-hover-glow group h-full border-border/55 bg-card transition-colors hover:border-primary/40 hover:bg-card">
                   <CardContent className="p-6">
                     {/* Thumbnail placeholder */}
-                    <div className="mb-4 flex h-32 items-center justify-center rounded-xl border border-border/40 bg-muted/25">
-                      <FileText className="h-10 w-10 text-muted-foreground/40" />
+                    <div className="mb-4 h-32 overflow-hidden rounded-xl border border-border/40 bg-muted/25 p-2.5">
+                      <div
+                        className="h-full rounded-md border border-zinc-300/70 bg-white px-2.5 py-2 text-zinc-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
+                        style={{ fontFamily: '"Times New Roman", "Georgia", serif' }}
+                      >
+                        <p className="truncate text-center text-[9px] font-semibold leading-tight text-zinc-900">
+                          {project.name}
+                        </p>
+                        <div className="mx-auto mt-1 h-px w-12 bg-zinc-300" />
+                        <div className="mt-1.5 space-y-1 text-[8px] leading-[1.35] text-zinc-700">
+                          {buildPreviewLines((project as { previewContent?: string }).previewContent).map((line, idx) => (
+                            <p key={`${project._id}-preview-${idx}`} className="truncate">
+                              {line}
+                            </p>
+                          ))}
+                          {buildPreviewLines((project as { previewContent?: string }).previewContent).length === 0 && (
+                            <p className="text-center text-zinc-500">Sem conteúdo</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <h3 className="truncate font-serif text-xl group-hover:text-primary transition-colors">
                       {project.name}

@@ -53,7 +53,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <span className="font-serif text-2xl font-semibold tracking-tight">
-            Tex<span className="text-gradient">AI</span>
+            Tex<span className="text-primary">AI</span>
           </span>
         </Link>
 
@@ -113,7 +113,7 @@ export function Navbar() {
                 className="font-serif text-xl font-semibold"
                 onClick={() => setOpen(false)}
               >
-                Tex<span className="text-gradient">AI</span>
+                Tex<span className="text-primary">AI</span>
               </Link>
               <div className="flex flex-col gap-4">
                 {navLinks.map((link) => (

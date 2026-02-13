@@ -215,10 +215,7 @@
 }
 
 .text-gradient {
-  background: linear-gradient(120deg, #65f2be 0%, #35c9ff 45%, #9eff8f 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--emerald);
 }
 
 .panel-glass {
@@ -390,4 +387,18 @@
 
 .typing-dot:nth-child(3) {
   animation-delay: 0.4s;
+}
+
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-cursor-blink {
+  animation: cursor-blink 0.8s step-end infinite;
 }

@@ -12,7 +12,35 @@ export const listByUser = query({
       )
       .collect();
 
-    return projects.sort((a, b) => b.updatedAt - a.updatedAt);
+    const sorted = projects.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    const projectsWithPreview = await Promise.all(
+      sorted.map(async (project) => {
+        const mainDoc = await ctx.db
+          .query("documents")
+          .withIndex("by_project_filename", (q) =>
+            q.eq("projectId", project._id).eq("filename", "main.tex")
+          )
+          .first();
+
+        const fallbackDoc = mainDoc
+          ? null
+          : await ctx.db
+              .query("documents")
+              .withIndex("by_project", (q) => q.eq("projectId", project._id))
+              .first();
+
+        const doc = mainDoc ?? fallbackDoc;
+
+        return {
+          ...project,
+          previewContent: doc?.content ?? "",
+          previewFilename: doc?.filename ?? null,
+        };
+      })
+    );
+
+    return projectsWithPreview;
   },
 });
 

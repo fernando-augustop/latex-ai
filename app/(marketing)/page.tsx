@@ -15,24 +15,8 @@ import {
   BookOpen,
   WandSparkles,
 } from "lucide-react";
-
-const sampleLatex = `\\documentclass{article}
-\\usepackage{amsmath}
-\\title{Meu Artigo de Pesquisa}
-\\author{Maria Silva}
-\\begin{document}
-\\maketitle
-
-\\section{Introdução}
-A equação $E = mc^2$ transformou
-nossa compreensão da física.
-
-\\begin{equation}
-  \\int_0^\\infty e^{-x^2} dx
-  = \\frac{\\sqrt{\\pi}}{2}
-\\end{equation}
-
-\\end{document}`;
+import { HeroTypewriter } from "@/components/marketing/hero-typewriter";
+import { HeroPreview } from "@/components/marketing/hero-preview";
 
 const features = [
   {
@@ -78,6 +62,8 @@ const titlePhrases = ["TexAI", "artigos", "teses", "ideias"];
 
 export default function LandingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const [completedLines, setCompletedLines] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -99,7 +85,7 @@ export default function LandingPage() {
           initial="initial"
           animate="animate"
         >
-          <motion.div variants={fadeUp} className="flex flex-col">
+          <motion.div variants={fadeUp} className="flex flex-col justify-center">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/35 bg-primary/15 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
               <WandSparkles className="h-3.5 w-3.5" />
               Workspace LaTeX com IA
@@ -127,16 +113,12 @@ export default function LandingPage() {
               <span className="text-[#b5d8ba]">{"}"}</span>
             </h1>
 
-            <p className="mt-4 max-w-xl text-xs uppercase tracking-[0.22em] text-muted-foreground/90 sm:text-sm md:mt-5">
-              da ideia ao latex pronto para publicação
-            </p>
-
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:mt-6">
+            <p className="my-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl md:my-8">
               Um editor pensado para ritmo real de produção: IA para acelerar,
               preview para validar e templates para começar em segundos.
             </p>
 
-            <p className="mt-auto pt-4 font-mono text-[1.6rem] tracking-[-0.04em] sm:text-[2.2rem] lg:text-[2.8rem]">
+            <p className="font-mono text-[1.6rem] tracking-[-0.04em] sm:text-[2.2rem] lg:text-[2.8rem]">
               <span className="text-primary/70 drop-shadow-[0_0_12px_rgba(42,213,157,0.25)]">
                 \end
               </span>
@@ -158,7 +140,7 @@ export default function LandingPage() {
               <span className="text-[#b5d8ba]/70">{"}"}</span>
             </p>
 
-            <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 pt-8 sm:flex-row sm:items-center">
               <Button size="lg" className="btn-press gap-2 rounded-full px-8 text-base" asChild>
                 <Link href="/register">
                   Comece Grátis
@@ -172,7 +154,7 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.div variants={fadeUp} className="relative flex flex-col">
-            <div className="panel-glass animate-emerald-glow flex flex-col overflow-hidden rounded-3xl">
+            <div className="panel-glass animate-emerald-glow flex flex-col rounded-3xl">
               <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
                 <div className="flex gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-300/80" />
@@ -184,66 +166,29 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              <div className="grid gap-0 md:grid-cols-2">
-                <div className="border-b border-border/50 p-5 md:border-b-0 md:border-r">
+              <div className="grid h-[400px] gap-0 md:grid-cols-2">
+                <div className="flex min-w-0 flex-col overflow-hidden border-b border-border/50 px-5 pb-5 pt-3 md:border-b-0 md:border-r">
                   <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                     <Code2 className="h-3.5 w-3.5 text-primary" />
                     Editor
+                    <span
+                      className={`ml-auto flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] normal-case tracking-normal text-primary transition-opacity ${
+                        isTyping ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      IA escrevendo...
+                    </span>
                   </div>
-                  <pre className="text-xs leading-relaxed text-muted-foreground">
-                    <code>{sampleLatex}</code>
-                  </pre>
+                  <HeroTypewriter onTypingChange={setIsTyping} onProgress={setCompletedLines} />
                 </div>
 
-                <div className="flex flex-col bg-card/40 p-5">
+                <div className="flex min-w-0 flex-col overflow-hidden bg-card/40 px-2.5 pb-2.5 pt-3">
                   <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                     <BookOpen className="h-3.5 w-3.5 text-primary" />
                     Preview
                   </div>
-                  <div className="relative flex-1 rounded-sm bg-white px-7 py-6 text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_20px_40px_rgba(0,0,0,0.15)]">
-                    {/* Page shadow left edge */}
-                    <div className="absolute inset-y-0 left-0 w-px bg-zinc-300/60" />
-
-                    <h2 className="text-center font-serif text-[15px] font-bold leading-snug tracking-tight">
-                      Meu Artigo de Pesquisa
-                    </h2>
-                    <p className="mt-1.5 text-center text-[10px] text-zinc-600">Maria Silva</p>
-                    <div className="mx-auto mt-1 h-px w-16 bg-zinc-200" />
-
-                    <div className="mt-4 space-y-2.5 text-[10px] leading-[1.65] text-zinc-700">
-                      <div>
-                        <h3 className="text-[11px] font-bold text-zinc-900">
-                          <span className="mr-1.5">1</span>Introdução
-                        </h3>
-                        <p className="mt-1 text-justify">
-                          A equação <em className="font-serif">E</em> = <em className="font-serif">mc</em>
-                          <sup className="text-[7px]">2</sup> transformou nossa compreensão da física moderna
-                          e estabeleceu as bases da relatividade especial.
-                        </p>
-                      </div>
-
-                      <div className="my-2 rounded border border-zinc-100 bg-zinc-50/80 px-3 py-2.5 text-center">
-                        <span className="font-serif text-[13px] italic leading-none tracking-tight text-zinc-800">
-                          <span className="relative mr-0.5 inline-block text-[20px] leading-none not-italic" style={{ verticalAlign: "-7px" }}>∫</span>
-                          <span className="relative inline-block w-2">
-                            <span className="absolute -top-2 left-0.5 text-[7px] not-italic">∞</span>
-                            <span className="absolute -bottom-0.5 left-0.5 text-[7px] not-italic">0</span>
-                          </span>
-                          <span className="ml-0.5">e</span>
-                          <sup className="text-[7px]">−x²</sup>
-                          <span className="ml-0.5 not-italic">d</span>x
-                          <span className="mx-1.5 not-italic">=</span>
-                          <span className="inline-flex flex-col items-center align-middle">
-                            <span className="border-b border-zinc-400 px-1 text-[9px] leading-tight">
-                              <span className="not-italic">√</span>π
-                            </span>
-                            <span className="text-[9px] not-italic leading-tight">2</span>
-                          </span>
-                        </span>
-                        <span className="ml-4 text-[8px] not-italic text-zinc-400">(1)</span>
-                      </div>
-                    </div>
-                  </div>
+                  <HeroPreview completedLines={completedLines} />
                 </div>
               </div>
             </div>
