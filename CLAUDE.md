@@ -242,6 +242,9 @@ The LaTeX compilation server runs on a self-hosted Arch Linux machine accessible
 - **Public URL**: `https://omarchy.tailcee049.ts.net` via Tailscale Funnel → proxies to `127.0.0.1:8787`
 - **Auth**: HMAC-SHA256 of the LaTeX source, sent via `X-API-Secret` header
 - **Python**: 3.13, FastAPI 0.128.8, Uvicorn 0.40.0, Pydantic 2.12.5
+- **TeX Live packages (Arch)**: `texlive-basic`, `texlive-bin`, `texlive-fontsrecommended`, `texlive-latex`, `texlive-latexrecommended`, `texlive-langportuguese`, `texlive-latexextra`, `texlive-pictures`
+- **Subprocess encoding**: All `subprocess.run` calls use `encoding="utf-8", errors="replace"` to handle Latin-1 characters in pdflatex output (Portuguese accented text like `é`, `ã`). Without this, `UnicodeDecodeError` crashes the server with HTTP 500.
+- **Error logging**: `.fmt` creation failures log both stdout+stderr (pdflatex writes errors to stdout, not stderr)
 
 ### pdflatex-fast engine
 
@@ -292,6 +295,13 @@ ssh augustop@omarchy "tailscale funnel status"
 Browser → fetch("/api/compile") → Next.js API Route → LATEX_API_URL/compile → omarchy:8787
        ← PDF binary (application/pdf) ← base64 decode ← JSON { pdf, duration_ms } ←
 ```
+
+### Troubleshooting
+
+- **`.fmt` creation fails**: Check `journalctl -u latex-api -n 50` for errors. Common cause: missing TeX Live language/package. Install with `sudo pacman -S texlive-lang<language>` or `texlive-latexextra`.
+- **HTTP 500 "Internal Server Error" (non-JSON)**: Usually a Python crash. Check logs. Common cause: `UnicodeDecodeError` from pdflatex outputting Latin-1 characters — all `subprocess.run` calls must use `encoding="utf-8", errors="replace"`.
+- **"Tectonic: no PDF generated"**: pdflatex-fast failed first, then Tectonic fallback also failed. Check if the LaTeX source uses packages/languages not installed on the server (`kpsewhich <package>.sty` to verify).
+- **Install new TeX packages**: `ssh augustop@omarchy` → `sudo pacman -S <package>` → `rm ~/latex-cache/formats/*.fmt` → `sudo systemctl restart latex-api`
 
 - See `server/README.md` for full server documentation, benchmarks, and troubleshooting
 - See `docs/optimization.md` for latency analysis and optimization research

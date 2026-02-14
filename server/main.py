@@ -5,7 +5,7 @@ TexAI LaTeX Compilation API v2
 - Persistent workdirs per document_id for aux/toc reuse
 
 Deploy: copy to ~/latex-api/main.py on the server, then restart the service.
-Prerequisites: sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+Prerequisites (Arch): sudo pacman -S texlive-basic texlive-latex texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese texlive-latexextra
 """
 
 import hashlib
@@ -71,6 +71,16 @@ def get_preamble_hash(preamble: str) -> str:
     return hashlib.sha256(preamble.encode()).hexdigest()[:16]
 
 
+def remove_stale_pdf(pdf_path: Path) -> None:
+    """Remove stale PDF from persistent workdir before a new compile."""
+    try:
+        if pdf_path.exists():
+            pdf_path.unlink()
+    except OSError:
+        # Best-effort cleanup; compile can still proceed.
+        pass
+
+
 def ensure_format_file(preamble: str, preamble_hash: str) -> Path | None:
     """Create .fmt file from preamble if it doesn't exist.
     Returns path to .fmt file, or None on failure."""
@@ -104,6 +114,8 @@ def ensure_format_file(preamble: str, preamble_hash: str) -> Path | None:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=COMPILE_TIMEOUT,
                 cwd=str(tmpdir),
                 env=env,
@@ -115,7 +127,8 @@ def ensure_format_file(preamble: str, preamble_hash: str) -> Path | None:
                 shutil.move(str(generated_fmt), str(fmt_path))
                 return fmt_path
             else:
-                print(f"[fmt] Failed to create .fmt: {result.stderr[-500:]}")
+                logs = (result.stdout + "\n" + result.stderr)[-500:]
+                print(f"[fmt] Failed to create .fmt: {logs}")
                 return None
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             print(f"[fmt] Error creating .fmt: {e}")
@@ -123,9 +136,9 @@ def ensure_format_file(preamble: str, preamble_hash: str) -> Path | None:
 
 
 def compile_with_format(
-    source: str, preamble_hash: str, document_id: str | None, timeout: int
+    body_source: str, preamble_hash: str, document_id: str | None, timeout: int
 ) -> dict:
-    """Compile using precompiled format file. Returns result dict."""
+    """Compile body using a precompiled format file. Returns result dict."""
     # Use persistent workdir if document_id provided
     if document_id:
         workdir = WORKDIR_BASE / document_id
@@ -139,7 +152,11 @@ def compile_with_format(
         tex_path = workdir / "document.tex"
         pdf_path = workdir / "document.pdf"
 
-        tex_path.write_text(source, encoding="utf-8")
+        # Prevent serving stale PDF from previous failed compile in this workdir.
+        remove_stale_pdf(pdf_path)
+        # The .fmt already contains the preamble. Compile only the body
+        # starting from \begin{document}.
+        tex_path.write_text(body_source, encoding="utf-8")
 
         env = os.environ.copy()
         env["TEXFORMATS"] = f"{FORMAT_DIR}:"
@@ -157,6 +174,8 @@ def compile_with_format(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             cwd=str(workdir),
             env=env,
@@ -204,6 +223,8 @@ def compile_tectonic(
         tex_path = workdir / "document.tex"
         pdf_path = workdir / "document.pdf"
 
+        # Prevent serving stale PDF from previous failed compile in this workdir.
+        remove_stale_pdf(pdf_path)
         tex_path.write_text(source, encoding="utf-8")
 
         cmd = [
@@ -217,6 +238,8 @@ def compile_tectonic(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             cwd=str(workdir),
         )
@@ -328,7 +351,7 @@ async def compile(request: Request, body: CompileRequest):
                 body.source, body.document_id, COMPILE_TIMEOUT
             )
         else:
-            preamble, _ = parts
+            preamble, body_source = parts
             preamble_hash = get_preamble_hash(preamble)
 
             # Ensure format file exists (creates on first use)
@@ -336,7 +359,7 @@ async def compile(request: Request, body: CompileRequest):
 
             if fmt_path:
                 compile_result = compile_with_format(
-                    body.source, preamble_hash, body.document_id, COMPILE_TIMEOUT
+                    body_source, preamble_hash, body.document_id, COMPILE_TIMEOUT
                 )
                 # If pdflatex-fast fails, fallback to tectonic
                 if not compile_result["success"]:
@@ -366,6 +389,7 @@ async def compile(request: Request, body: CompileRequest):
 
         tex_path = workdir / "document.tex"
         pdf_path = workdir / "document.pdf"
+        remove_stale_pdf(pdf_path)
         tex_path.write_text(body.source, encoding="utf-8")
 
         cmd = [
@@ -380,6 +404,8 @@ async def compile(request: Request, body: CompileRequest):
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=COMPILE_TIMEOUT,
                 cwd=str(workdir),
             )

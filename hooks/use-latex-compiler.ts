@@ -57,6 +57,12 @@ export function useLatexCompiler({
   const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track if a compile is currently in progress (to prevent overlapping)
   const compilingRef = useRef(false);
+  // Queue the latest compile request while another compile is running.
+  const pendingCompileRef = useRef<{
+    source: string;
+    engine?: string;
+    silent: boolean;
+  } | null>(null);
 
   // Fire-and-forget tracking mutation (does NOT block PDF display)
   const trackCompile = useMutation(api.latex.trackDirectCompile);
@@ -108,8 +114,11 @@ export function useLatexCompiler({
         return;
       }
 
-      // Prevent overlapping compiles
-      if (compilingRef.current) return;
+      // Prevent overlapping compiles, but keep the latest request queued.
+      if (compilingRef.current) {
+        pendingCompileRef.current = { source, engine, silent };
+        return;
+      }
 
       // Optimistic UI: set compiling status immediately
       setStatus("compiling");
@@ -132,10 +141,21 @@ export function useLatexCompiler({
           // Success: response is PDF binary
           const pdfBlob = await response.blob();
           const url = URL.createObjectURL(pdfBlob);
+          const responseSourceHash = response.headers.get("X-Source-Hash");
           const compileDuration = parseInt(
             response.headers.get("X-Compile-Duration") ?? "0",
             10
           );
+          if (responseSourceHash && responseSourceHash !== sourceHash) {
+            setStatus("error");
+            setError("Resposta de compilacao divergente do texto atual do editor");
+            if (!silent) {
+              toast.error("Compilacao divergente", {
+                description: "O servidor retornou um PDF de outro hash de conteudo.",
+              });
+            }
+            return;
+          }
 
           // Store in cache
           cacheRef.current.set(sourceHash, url);
@@ -204,6 +224,12 @@ export function useLatexCompiler({
         }
       } finally {
         compilingRef.current = false;
+        const pending = pendingCompileRef.current;
+        pendingCompileRef.current = null;
+        if (pending) {
+          // Process only the latest queued request after current compile completes.
+          compileServer(pending.source, pending.engine, { silent: pending.silent });
+        }
       }
     },
     [documentId, setBlobUrl, trackCompile]
@@ -223,7 +249,6 @@ export function useLatexCompiler({
         const sourceHash = await hashSource(source);
         if (sourceHash === lastCompiledHashRef.current) return;
         if (cacheRef.current.has(sourceHash)) return;
-        if (compilingRef.current) return;
 
         // Silent auto-compile (no toasts)
         compileServer(source, engine, { silent: true });
