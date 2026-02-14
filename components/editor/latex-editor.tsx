@@ -63,6 +63,13 @@ const darkTheme = EditorView.theme(
 export function LatexEditor({ value, onChange }: LatexEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Track the last value reported by CodeMirror via onChange.
+  // This lets us distinguish "value changed because user typed" (skip sync)
+  // from "value changed externally e.g. AI apply" (must sync to CM).
+  const lastReportedValueRef = useRef(value);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -81,7 +88,9 @@ export function LatexEditor({ value, onChange }: LatexEditorProps) {
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString());
+            const newDoc = update.state.doc.toString();
+            lastReportedValueRef.current = newDoc;
+            onChangeRef.current(newDoc);
           }
         }),
         EditorView.lineWrapping,
@@ -101,6 +110,23 @@ export function LatexEditor({ value, onChange }: LatexEditorProps) {
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync external value changes into CodeMirror (e.g. AI "Aplicar no Editor").
+  // Skip when the value came from CodeMirror itself (user typing).
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    // If value matches what CodeMirror last reported, the change originated
+    // from user typing — no need to push it back into CM.
+    if (value === lastReportedValueRef.current) return;
+    lastReportedValueRef.current = value;
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc !== value) {
+      view.dispatch({
+        changes: { from: 0, to: currentDoc.length, insert: value },
+      });
+    }
+  }, [value]);
 
   return <div ref={containerRef} className="h-full overflow-hidden bg-card/35" />;
 }

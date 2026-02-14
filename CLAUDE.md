@@ -52,7 +52,7 @@ latex-ai/
 ├── convex/                       # Convex backend (schema, CRUD, LaTeX compilation)
 ├── hooks/                        # Custom React hooks (useLatexCompiler, etc.)
 ├── lib/
-│   ├── ai/                       # AI providers, system prompt, knowledge base
+│   ├── ai/                       # AI providers, system prompt guide, knowledge base
 │   ├── auth.ts                   # BetterAuth config
 │   ├── latex/                    # Client-side compiler + templates
 │   ├── pdf-generator.ts          # Client-side PDF generation (html2canvas + jsPDF)
@@ -135,7 +135,7 @@ Uses oklch color space throughout. Primary color is a green/emerald tone:
 
 ### Feature Gates by Tier
 
-Tier limits are defined in both `lib/tier-limits.ts` (frontend) and `convex/tierLimits.ts` (backend). All tiers have `hasServerCompile: true` and unlimited compiles (`maxServerCompilesPerDay: Infinity`). Rate limiting: `maxCompilesPerMinute` (free=15, pro=Infinity, enterprise=Infinity). Auto-compile debounce: free=2000ms, pro=1000ms, enterprise=800ms. Daily usage is tracked in the `users` table (`compilesUsedToday`/`lastCompileResetDate`, both optional fields) via fire-and-forget `trackDirectCompile` mutation.
+Tier limits are defined in both `lib/tier-limits.ts` (frontend) and `convex/tierLimits.ts` (backend). All tiers have `hasServerCompile: true` and unlimited compiles (`maxServerCompilesPerDay: Infinity`). Compilation speed is identical across all tiers: `maxCompilesPerMinute: Infinity`, `autoCompileDebounceMs: 1000ms`. Tiers differ only in project count, AI access, storage, and model availability. Daily usage is tracked in the `users` table (`compilesUsedToday`/`lastCompileResetDate`, both optional fields) via fire-and-forget `trackDirectCompile` mutation.
 
 ## AI Chat System
 
@@ -148,7 +148,7 @@ Architecture: Browser (`useChat` hook) → Next.js API route (`/api/chat`) → O
 - **Auth**: API route uses `isAuthenticated()` + `fetchAuthMutation()` from `lib/auth-server.ts`
 - **Daily limits**: Pro tier has 50 msgs/day, tracked via `api.users.getAiUsage` / `api.users.incrementAiUsage` in Convex
 - **Image upload**: Client converts to base64 data URL, sent as `file` part via `sendMessage`. Displayed inline in messages.
-- **System prompt**: `lib/ai/latex-system-prompt.ts` builds prompt with LaTeX knowledge base + current document content
+- **System prompt**: `lib/ai/latex-system-prompt.ts` builds prompt from `lib/ai/system-prompt.md` (AI behavior guide) + `lib/ai/latex-knowledge.md` (reference) + current document content. The guide instructs the AI to respond in pt-BR, prioritize code output, and support slash commands (`/tabela`, `/formula`, `/corrigir`, etc.)
 - **Env var**: `OPENROUTER_API_KEY` (set in `.env.local`)
 
 ### Convex Chat Messages (`convex/chatMessages.ts`)

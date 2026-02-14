@@ -1,0 +1,698 @@
+\documentclass[a4paper,12pt,draft]{article}
+\usepackage[portuguese]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{enumitem}
+
+\title{
+    Relatório de Laboratório de Sistemas Digitais 7 \\ % Main title
+    \large Maquina de estado de Moore% Subtitle in smaller font
+}
+
+\author{Fernando A. Hortencio de Oliveira \\
+Matrícula: 232002190 \\
+Turma 09}
+\date{2024.2}
+
+\begin{document}
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+
+\section{Introdução}
+A atividade consiste em implementar e simular, em VHDL e ModelSim, uma máquina de estados síncrona do tipo Moore. Essa máquina será utilizada para controlar uma máquina de vendas que aceita moedas de 25 centavos e 50 centavos. O sistema deve ser capaz de contabilizar o valor inserido, liberar o produto automaticamente quando a soma atingir ou exceder 1 real, devolver troco quando necessário e permitir o cancelamento da compra antes que o valor total atinja 1 real.
+
+\subsection{Funcionamento da Máquina de Vendas}
+O funcionamento segue as seguintes diretrizes:
+\begin{itemize}
+    \item A máquina aceita qualquer combinação de moedas de 25 e 50 centavos, inseridas em qualquer ordem;
+    \item Quando a soma das moedas atingir ou exceder 1 real, o produto é liberado automaticamente;
+    \item O usuário pode cancelar a compra a qualquer momento antes que o valor total atinja 1 real;
+    \item Após a liberação do produto ou o cancelamento da compra, a máquina retorna ao estado inicial e está pronta para aceitar novas moedas.
+\end{itemize}
+
+\subsection{Restrições}
+Para o correto funcionamento, devem ser seguidas as seguintes restrições:
+\begin{itemize}
+    \item O sistema realiza apenas uma ação por ciclo de clock;
+    \item Não é permitido inserir valores que excedam 1 real em uma única operação;
+    \item Após a conclusão de uma compra ou cancelamento, a máquina volta ao estado inicial.
+\end{itemize}
+\newpage
+\subsection{Entradas e Saídas da Entidade VHDL}
+A entidade VHDL possui as seguintes especificações:
+\begin{itemize}
+    \item \textbf{Entradas:}
+    \begin{itemize}
+        \item Sinal de clock (1 bit);
+        \item Vetor \( A \) (2 bits):
+        \begin{itemize}
+            \item \( A = 01 \): moeda de 25 centavos inserida;
+            \item \( A = 10 \): moeda de 50 centavos inserida;
+            \item \( A = 11 \): cancelamento solicitado pelo usuário;
+            \item \( A = 00 \): nenhuma ação do usuário.
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Saídas:}
+    \begin{itemize}
+        \item Sinal indicando que o produto foi liberado;
+        \item Sinal indicando a devolução de uma moeda de 25 centavos;
+        \item Sinal indicando a devolução de uma moeda de 50 centavos.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Objetivo Final}
+O objetivo é implementar o código VHDL com base na descrição acima e realizar simulações no ModelSim para verificar a conformidade com os requisitos propostos. O sistema deve gerenciar os estados de maneira eficiente e atender a todas as funcionalidades descritas.
+
+\newpage
+\section{Códigos implementados}
+\subsection{Código Principal}
+\begin{verbatim}
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity maquina_de_vendas is
+    Port (
+        clk      : in  STD_LOGIC;
+        A        : in  STD_LOGIC_VECTOR(1 downto 0);
+        produto  : out STD_LOGIC;
+        troco25 : out STD_LOGIC;
+        troco50 : out STD_LOGIC
+    );
+end maquina_de_vendas;
+
+architecture Behavioral of maquina_de_vendas is
+    type state_type is (
+        S0, S25, S50, S75,
+        LIBERA_P0, LIBERA_P25,
+        CANCELA_C25, CANCELA_C50, CANCELA_C75
+    );
+    signal estado_atual, proximo_estado : state_type := S0;
+begin
+
+    -- Processo para atualização do estado
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            estado_atual <= proximo_estado;
+        end if;
+    end process;
+
+    -- Processo combinacional para transições e saídas
+    process(estado_atual, A)
+    begin
+        case estado_atual is
+            -- Estado Inicial (0 centavos)
+            when S0 =>
+                produto <= '0';
+                troco25 <= '0';
+                troco50 <= '0';
+                case A is
+                    when "01" => proximo_estado <= S25;   -- Insere 25c
+                    when "10" => proximo_estado <= S50;   -- Insere 50c
+                    when others => proximo_estado <= S0;  -- Nada ou Cancelar
+                end case;
+
+            -- Estado com 25 centavos
+            when S25 =>
+                produto <= '0';
+                troco25 <= '0';
+                troco50 <= '0';
+                case A is
+                    when "01" => proximo_estado <= S50;    -- Total 50c
+                    when "10" => proximo_estado <= S75;    -- Total 75c
+                    when "11" => proximo_estado <= CANCELA_C25; --Cancelar(d25c)
+                    when others => proximo_estado <= S25;  -- Mantém estado
+                end case;
+
+            -- Estado com 50 centavos
+            when S50 =>
+                produto <= '0';
+                troco25 <= '0';
+                troco50 <= '0';
+                case A is
+                    when "01" => proximo_estado <= S75;    -- Total 75c
+                    when "10" => proximo_estado <= LIBERA_P0; -- 100c (P)
+                    when "11" => proximo_estado <= CANCELA_C50; --Cancelar(d50c)
+                    when others => proximo_estado <= S50;  -- Mantém estado
+                end case;
+
+            -- Estado com 75 centavos
+            when S75 =>
+                produto <= '0';
+                troco25 <= '0';
+                troco50 <= '0';
+                case A is
+                    when "01" => proximo_estado <= LIBERA_P0;  -- 100c (P)
+                    when "10" => proximo_estado <= LIBERA_P25; -- 125c (P + 25c)
+                    when "11" => proximo_estado <= CANCELA_C75; --Cancelar(d75c)
+                    when others => proximo_estado <= S75;  -- Mantém estado
+                end case;
+
+            -- Estados de Liberação do Produto
+            when LIBERA_P0 =>    -- Total exato (100c)
+                produto <= '1';
+                troco25 <= '0';
+                troco50 <= '0';
+                proximo_estado <= S0; -- Retorna ao estado inicial
+
+            when LIBERA_P25 =>   -- Total 125c (troco 25c)
+                produto <= '1';
+                troco25 <= '1';
+                troco50 <= '0';
+                proximo_estado <= S0;
+
+            -- Estados de Cancelamento
+            when CANCELA_C25 =>    -- Devolve 25c
+                produto <= '0';
+                troco25 <= '1';
+                troco50 <= '0';
+                proximo_estado <= S0;
+
+            when CANCELA_C50 =>    -- Devolve 50c
+                produto <= '0';
+                troco25 <= '0';
+                troco50 <= '1';
+                proximo_estado <= S0;
+
+            when CANCELA_C75 =>    -- Devolve 75c (25c + 50c)
+                produto <= '0';
+                troco25 <= '1';
+                troco50 <= '1';
+                proximo_estado <= S0;
+
+            when others =>        -- Caso padrão
+                proximo_estado <= S0;
+        end case;
+    end process;
+
+end Behavioral;
+\end{verbatim}
+
+\newpage
+\subsection{Código Testbench}
+\begin{verbatim}
+    library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity tb_maquina is
+end tb_maquina;
+
+architecture Behavioral of tb_maquina is
+
+    component maquina_de_vendas
+        Port (
+            clk     : in STD_LOGIC;
+            A       : in STD_LOGIC_VECTOR(1 downto 0);
+            produto : out STD_LOGIC;
+            troco25 : out STD_LOGIC;
+            troco50 : out STD_LOGIC
+        );
+    end component;
+
+    signal clk      : STD_LOGIC := '0';
+    signal A        : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    signal produto  : STD_LOGIC;
+    signal troco25  : STD_LOGIC;
+    signal troco50  : STD_LOGIC;
+
+    constant clk_period : time := 20 ns;
+
+begin
+
+    uut: maquina_de_vendas port map (
+        clk => clk,
+        A => A,
+        produto => produto,
+        troco25 => troco25,
+        troco50 => troco50
+    );
+
+    -- Processo para gerar o clock
+    clk_process: process
+    begin
+        clk <= '0';
+        wait for clk_period/2;
+        clk <= '1';
+        wait for clk_period/2;
+    end process;
+
+    -- Processo de estímulo
+    stim_proc: process
+    begin
+        -- Inicialização
+        wait for clk_period*2;
+
+        -- Teste 1: Pagamento exato (50c + 50c)
+        A <= "10"; -- Insere 50c
+        wait for clk_period;
+        A <= "10"; -- Insere 50c (total 100c)
+        wait for clk_period;
+        assert produto = '1' and troco25 = '0' and troco50 = '0'
+            report "Erro Teste 1: Produto deveria ser liberado sem troco" severity error;
+        wait for clk_period; -- Retorna a S0
+
+        -- Teste 2: Pagamento a mais (50c + 50c + 25c)
+        A <= "10"; -- 50c
+        wait for clk_period;
+        A <= "10"; -- 50c (total 100c)
+        wait for clk_period;
+        A <= "01"; -- 25c (total 125c)
+        wait for clk_period;
+        assert produto = '1' and troco25 = '1' and troco50 = '0'
+            report "Erro Teste 2: Produto com troco de 25c" severity error;
+        wait for clk_period; -- Retorna a S0
+
+        -- Teste 3: Cancelamento em S25
+        A <= "01"; -- 25c
+        wait for clk_period;
+        A <= "11"; -- Cancela
+        wait for clk_period;
+        assert troco25 = '1' and produto = '0'
+            report "Erro Teste 3: Deveria devolver 25c" severity error;
+        wait for clk_period; -- Retorna a S0
+
+        -- Teste 4: Cancelamento em S50
+        A <= "10"; -- 50c
+        wait for clk_period;
+        A <= "11"; -- Cancela
+        wait for clk_period;
+        assert troco50 = '1' and produto = '0'
+            report "Erro Teste 4: Deveria devolver 50c" severity error;
+        wait for clk_period; -- Retorna a S0
+
+        -- Teste 5: Cancelamento em S75
+        A <= "01"; -- 25c
+        wait for clk_period;
+        A <= "10"; -- 50c (total 75c)
+        wait for clk_period;
+        A <= "11"; -- Cancela
+        wait for clk_period;
+        assert troco25 = '1' and troco50 = '1' and produto = '0'
+            report "Erro Teste 5: Deveria devolver 75c (25+50)" severity error;
+        wait for clk_period; -- Retorna a S0
+
+        -- Teste 6: Nenhuma ação (mantém estado)
+        A <= "01"; -- 25c
+        wait for clk_period;
+        A <= "00"; -- Nada
+        wait for clk_period;
+        A <= "01"; -- 25c (total 50c)
+        wait for clk_period;
+        assert produto = '0' and troco25 = '0' and troco50 = '0'
+            report "Erro Teste 6: Deveria estar em S50" severity error;
+
+        -- Finaliza simulação
+        wait;
+    end process;
+
+end Behavioral;
+\end{verbatim}
+
+
+\section{Explicação códigos implementados}
+
+\subsection{Explicação código Principal}
+
+
+
+\subsubsection{Bibliotecas Utilizadas}
+O código utiliza a biblioteca IEEE e o pacote STD\_LOGIC\_1164, que define os tipos de dados lógicos essenciais para a descrição do hardware:
+
+\begin{lstlisting}[language=VHDL, basicstyle=\ttfamily, keywordstyle=\color{blue}, commentstyle=\color{gray}]
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+\end{lstlisting}
+
+\subsubsection{Declaração da Entidade}
+A entidade \texttt{maquina\_de\_vendas} possui as seguintes portas:
+\begin{itemize}
+    \item \texttt{clk}: Sinal de clock para a sincronização.
+    \item \texttt{A}: Vetor de 2 bits representando as moedas inseridas (\texttt{"01"} para 25 centavos e \texttt{"10"} para 50 centavos).
+    \item \texttt{produto}: Saída indicando a liberação do produto.
+    \item \texttt{troco25} e \texttt{troco50}: Sinais de saída indicando devolução de troco de 25 e 50 centavos, respectivamente.
+\end{itemize}
+
+\subsubsection{Definição dos Estados}
+A arquitetura \texttt{Behavioral} define os estados do sistema utilizando um tipo enumerado:\newline
+\begin{lstlisting}[language=VHDL]
+type state_type is (
+    S0, S25, S50, S75,
+    LIBERA_P0, LIBERA_P25,
+    CANCELA_C25, CANCELA_C50, CANCELA_C75
+);
+signal estado_atual, proximo_estado : state_type := S0;
+\end{lstlisting}
+Os estados representam as quantidades acumuladas (0, 25, 50 e 75 centavos), além de estados de liberação do produto e devolução de troco.
+
+\subsubsection{Atualização de Estado}
+O código implementa um processo síncrono para atualizar o estado a cada borda de subida do clock:
+\begin{lstlisting}[language=VHDL]
+process(clk)
+begin
+    if rising_edge(clk) then
+        estado_atual <= proximo_estado;
+    end if;
+end process;
+\end{lstlisting}
+
+\subsubsection{Lógica de Transições}
+A transição entre estados ocorre com base no valor de \texttt{A}:
+\begin{lstlisting}[language=VHDL]
+case estado_atual is
+    when S0 =>
+        case A is
+            when "01" => proximo_estado <= S25;
+            when "10" => proximo_estado <= S50;
+            when others => proximo_estado <= S0;
+        end case;
+\end{lstlisting}
+Nos estados intermediários (\texttt{S25}, \texttt{S50}, \texttt{S75}), novas inserções de moedas podem levar ao próximo estado, enquanto a seleção de cancelamento retorna ao estado inicial devolvendo o valor apropriado.
+
+\subsubsection{Liberação de Produto e Troco}
+Ao atingir 100 centavos, o produto é liberado e o sistema retorna ao estado inicial:
+\begin{lstlisting}[language=VHDL]
+when LIBERA_P0 =>
+    produto <= '1';
+    troco25 <= '0';
+    troco50 <= '0';
+    proximo_estado <= S0;
+\end{lstlisting}
+Se o valor inserido exceder 100 centavos, o troco é devolvido:
+\begin{lstlisting}[language=VHDL]
+when LIBERA_P25 =>
+    produto <= '1';
+    troco25 <= '1';
+    troco50 <= '0';
+    proximo_estado <= S0;
+\end{lstlisting}
+
+
+
+\subsection{Explicação código Test Bench}
+
+O test bench é um ambiente de simulação usado para verificar o comportamento da máquina de vendas. Ele gera sinais de entrada, monitora as saídas e compara os resultados esperados com os observados.
+
+\subsubsection{Declaração da Entidade}
+A entidade \texttt{tb\_maquina} não possui portas, pois é um test bench. A máquina de vendas é instanciada internamente.
+
+\subsubsection{Sinais Utilizados}
+São definidos sinais para entrada e saída:
+\begin{itemize}
+    \item \texttt{clk}: Clock do sistema.
+    \item \texttt{A}: Vetor de 2 bits representando a inserção de moedas.
+    \item \texttt{produto}, \texttt{troco25}, \texttt{troco50}: Sinais de saída para indicar a liberação do produto e troco.
+    \item \texttt{clk\_period}: Período do clock definido como 20 ns.
+\end{itemize}
+
+\subsubsection{Geração do Clock}
+Um processo gera um clock alternante:
+\begin{lstlisting}[language=VHDL]
+clk_process: process
+begin
+    clk <= '0';
+    wait for clk_period/2;
+    clk <= '1';
+    wait for clk_period/2;
+end process;
+\end{lstlisting}
+
+
+\subsubsection{Casos de Teste}
+O test bench verifica diferentes cenários de uso:
+
+\subsubsection{Teste 1: Insere 50c duas vezes (total 100c)}
+Verifica se o produto é liberado sem troco.
+\begin{lstlisting}[language=VHDL]
+A <= "10"; wait for clk_period;
+A <= "10"; wait for clk_period;
+assert produto = '1' and troco25 = '0' and troco50 = '0';
+\end{lstlisting}
+
+\subsubsection{Teste 2: Insere 50c + 50c + 25c (125c)}
+Verifica se o produto é liberado com troco de 25c.
+\begin{lstlisting}[language=VHDL]
+A <= "10"; wait for clk_period;
+A <= "10"; wait for clk_period;
+A <= "01"; wait for clk_period;
+assert produto = '1' and troco25 = '1' and troco50 = '0';
+\end{lstlisting}
+
+\subsubsection{Teste 3: Insere 25c e cancela}
+Verifica se 25c é devolvido.
+\begin{lstlisting}[language=VHDL]
+A <= "01"; wait for clk_period;
+A <= "11"; wait for clk_period;
+assert troco25 = '1' and produto = '0';
+\end{lstlisting}
+
+\subsubsection{Teste 4: Insere 50c e cancela}
+Verifica se 50c é devolvido.
+\begin{lstlisting}[language=VHDL]
+A <= "10"; wait for clk_period;
+A <= "11"; wait for clk_period;
+assert troco50 = '1' and produto = '0';
+\end{lstlisting}
+
+\subsubsection{Teste 5: Insere 25c + 50c e cancela}
+Verifica se 75c (25+50) é devolvido.
+\begin{lstlisting}[language=VHDL]
+A <= "01"; wait for clk_period;
+A <= "10"; wait for clk_period;
+A <= "11"; wait for clk_period;
+assert troco25 = '1' and troco50 = '1' and produto = '0';
+\end{lstlisting}
+
+\subsubsection{Teste 6: Nenhuma ação (mantém estado)}
+Verifica se a máquina mantém o estado quando não há entrada (A="00").
+\begin{lstlisting}[language=VHDL]
+A <= "01"; wait for clk_period;
+A <= "00"; wait for clk_period;
+A <= "01"; wait for clk_period;
+assert produto = '0' and troco25 = '0' and troco50 = '0';
+\end{lstlisting}
+\newpage
+\section{Diagramas e tabelas que explicam a implementação e lógica dos códigos}
+
+
+\begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{Diagrama.png}
+        \caption{Diagrama de transição de estados da máquina de estados implementada}
+\end{figure}
+
+
+
+\begin{table}[h!]
+    \centering
+
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{A1A0} & \textbf{O que acontece:} \\ \hline
+        00 & Nada \\ \hline
+        01 & Adiciona 0,25 \\ \hline
+        10 & Adiciona 0,50 \\ \hline
+        11 & Cancela \\ \hline
+    \end{tabular}
+    \caption{Tabela da descrição da transição de estados}
+\end{table}
+
+
+
+
+\newpage
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.5} % Ajusta o espaçamento entre linhas
+\setlength{\tabcolsep}{5pt} % Ajusta o espaçamento entre colunas
+\begin{tabular}{|>{\centering\arraybackslash}m{3cm}|>{\centering\arraybackslash}m{3cm}|>{\centering\arraybackslash}m{2cm}|>{\centering\arraybackslash}m{2cm}|>{\centering\arraybackslash}m{2cm}|>{\centering\arraybackslash}m{2cm}|}
+\hline
+\textbf{Significado} & \textbf{Estado atual} & \textbf{00} & \textbf{01} & \textbf{11} & \textbf{10} \\ \hline
+Inicial t=0         & INIT                  & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+t=0,25              & I0,25                & I0,25       & I0,50       & T0,25       & I0,75       \\ \hline
+t=0,50              & I0,50                & I0,50       & I0,75       & T0,50       & I1          \\ \hline
+t=0,75              & I0,75                & I0,75       & I1          & T0,75       & I1,25       \\ \hline
+t=1                 & I1                   & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+t=1,25              & I1,25                & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+t=0                 & T0,25                & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+t=0                 & T0,50                & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+t=0                 & T0,75                & INIT        & I0,25       & INIT        & I0,50       \\ \hline
+\end{tabular}
+\caption{Tabela \textbf{A1A0} principal,estados e saídas da máquina de estados implementadas. Legenda: \textbf{t} = Tenho, \textbf{T} = Troco, \textbf{I} = Inseriu.}
+\label{tab:principal}
+\end{table}
+
+
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.5} % Ajusta o espaçamento entre linhas
+\setlength{\tabcolsep}{10pt} % Ajusta o espaçamento entre colunas
+\begin{tabular}{|>{\centering\arraybackslash}m{3cm}|>{\centering\arraybackslash}m{1cm}|>{\centering\arraybackslash}m{1cm}|>{\centering\arraybackslash}m{1cm}|}
+\hline
+\textbf{Estado atual} & \textbf{R} & \textbf{T25} & \textbf{T50} \\ \hline
+INIT                  & 0          & 0            & 0            \\ \hline
+I0,25                & 0          & 0            & 0            \\ \hline
+I0,50                & 0          & 0            & 0            \\ \hline
+I0,75                & 0          & 0            & 0            \\ \hline
+I1                   & 1          & 0            & 0            \\ \hline
+I1,25                & 1          & 1            & 0            \\ \hline
+T0,25                & 0          & 1            & 0            \\ \hline
+T0,50                & 0          & 0            & 1            \\ \hline
+T0,75                & 0          & 1            & 1            \\ \hline
+\end{tabular}
+\caption{Tabela dos sinais auxiliares (\textbf{R}, \textbf{T25}, \textbf{T50}).}
+\label{tab:auxiliar}
+\end{table}
+
+\newpage
+
+\section{Simulação e Resultados}
+A simulação foi realizada utilizando o código implementado. A Figura 2 apresenta as ondas resultantes, com os sinais relevantes anotados para análise. Cada intervalo de tempo destacado corresponde a uma linha da tabela-verdade.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{ModelSim1.png}
+    \caption{Simulação das ondas da máquina de vendas.}
+    \label{fig:simulacao}
+\end{figure}
+
+\subsection*{Descrição dos Sinais}
+\begin{itemize}
+    \item \textbf{/tb\_maquina/clk}: Sinal de clock que controla as transições de estado.
+    \item \textbf{/tb\_maquina/A}: Entrada que indica o valor inserido:
+    \begin{itemize}
+        \item "00": Nenhuma entrada ou cancelamento.
+        \item "01": Inserção de 25 centavos.
+        \item "10": Inserção de 50 centavos.
+        \item "11": Cancelamento com devolução de troco.
+    \end{itemize}
+    \item \textbf{/tb\_maquina/produto}: Sinal que indica a liberação do produto.
+    \item \textbf{/tb\_maquina/troco25}: Indica devolução de 25 centavos.
+    \item \textbf{/tb\_maquina/troco50}: Indica devolução de 50 centavos.
+\end{itemize}
+
+\subsection*{Análise por Intervalo de Tempo}
+\begin{itemize}
+    \item \textbf{0 ps a 200000 ps}: Estado inicial (\textbf{S0}). Não há inserção de valores. O estado permanece inalterado.
+    \item \textbf{200000 ps a 400000 ps}: Inserção de 25 centavos (A="01"). Transição para o estado \textbf{S25}.
+    \item \textbf{400000 ps a 600000 ps}: Inserção de 50 centavos (A="10"). Transição para o estado \textbf{S75}.
+    \item \textbf{600000 ps a 800000 ps}: Inserção de mais 25 centavos (A="01"). Transição para o estado \textbf{LIBERA\_P0}, liberando o produto.
+    \item \textbf{800000 ps a 1000000 ps}: Cancelamento (A="11") no estado \textbf{S75}. Transição para \textbf{CANCELA\_C75}, devolvendo 75 centavos.
+\end{itemize}
+
+\subsection*{Adicionalmente abaixo estarão os casos mais relevantes simulados:}
+\begin{itemize}
+    \item \textbf{Teste 1}: Insere 50c duas vezes (total 100c, entrega produto)
+    \item \textbf{Teste 4}: Insere 50c e cancela (devolução de 50c)
+    \item \textbf{Teste 5}: Insere 25c + 50c e cancela (devolução de 75c)
+\end{itemize}
+
+\newpage
+\section{Teste 1}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{teste1.png}
+    \caption{Simulação das ondas da máquina de vendas.}
+    \label{fig:teste1}
+\end{figure}
+\begin{itemize}
+    \item \textbf{/tb\_maquina/clk}: Este é o sinal de \textbf{clock}, que controla o sincronismo da máquina de estados. O clock é uma onda quadrada, alternando entre os níveis lógico alto (1) e baixo (0), e é responsável por disparar as transições de estado.
+
+    \item \textbf{/tb\_maquina/A}: O sinal \textbf{A} representa a entrada fornecida pelo usuário, indicando o valor inserido ou a solicitação de cancelamento:
+    \begin{itemize}
+        \item Valor "10": Inserção de 50 centavos.
+    \end{itemize}
+    No trecho destacado, a entrada "10" indica que o usuário inseriu 50 centavos na máquina, isso ocorre durante 2 ciclos, ou seja o usuário inseriu 100 centavos, o valor do produto.
+
+    \item \textbf{/tb\_maquina/produto}: O sinal \textbf{produto} controla a liberação do item adquirido. Durante o intervalo analisado, este sinal permanece em \textbf{"0"} até que sejam inseridas duas moedas de 50 centavos, indicando que o produto ainda não foi liberado.
+
+    \item \textbf{/tb\_maquina/troco25}: O sinal \textbf{troco25} indica a devolução de 25 centavos. No trecho destacado, o valor está em \textbf{"0"}, confirmando que não há devolução de 25 centavos neste estado.
+
+    \item \textbf{/tb\_maquina/troco50}: O sinal \textbf{troco50} representa a devolução de 50 centavos como troco. Assim como o sinal anterior, ele também está em \textbf{"0"}, indicando que não há devolução de 50 centavos neste estado.
+
+    \item \textbf{/tb\_maquina/uut/estado}: Este sinal reflete o estado atual da máquina de estados. No intervalo destacado, o estado é \textbf{LIBERA\_P0}, o que significa que:
+    \begin{itemize}
+        \item O total inserido foi suficiente (100 centavos);
+        \item O produto será liberado sem necessidade de devolução de troco.
+    \end{itemize}
+\end{itemize}
+
+
+A simulação confirma o funcionamento correto da máquina de estados de acordo com o comportamento esperado.
+
+\newpage
+\section{Teste 4}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{teste2.png}
+    \caption{Simulação das ondas da máquina de vendas.}
+    \label{fig:teste4}
+\end{figure}
+
+O gráfico abaixo descreve o comportamento da máquina de venda automática para o \textbf{Teste 4}. O objetivo é verificar se a devolução de 50c ocorre corretamente após a inserção de 50c, seguida do comando de cancelamento. \newline
+
+\textbf{Descrição:}
+\begin{itemize}
+    \item \textbf{Entrada}: Sinal \texttt{A} variou conforme o valor:
+    \begin{itemize}
+        \item \texttt{10} (50c).
+    \end{itemize}
+    \item \textbf{Cancelamento}: O comando de cancelamento foi recebido após a entrada.
+    \item \textbf{Troco}: O sinal \texttt{troco50} subiu para \texttt{1}, confirmando a devolução correta de 50c. O sinal \texttt{troco25} permaneceu em \texttt{0}, e \texttt{produto} também permaneceu em \texttt{0}, indicando que nenhum produto foi liberado.
+\end{itemize}
+
+\textbf{Assertivas:}
+\begin{verbatim}
+assert troco50 = '1' and troco25 = '0' and produto = '0';
+\end{verbatim}
+
+
+
+
+\newpage
+\section{Teste 5}
+O gráfico abaixo descreve o comportamento da máquina de venda automática para o \textbf{Teste 5}. O objetivo é verificar se a devolução de 75c ocorre corretamente após a inserção de 25c e 50c, seguida do comando de cancelamento. \newline
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{teste5.png}
+    \caption{Simulação do Teste 5: Insere 25c + 50c e cancela (75c).}
+    \label{fig:teste5}
+\end{figure}
+
+\textbf{Descrição:}
+\begin{itemize}
+    \item \textbf{Entrada}: Sinal \texttt{A} variou conforme os valores:
+    \begin{itemize}
+        \item \texttt{01} (25c);
+        \item \texttt{10} (50c).
+    \end{itemize}
+    \item \textbf{Cancelamento}: O comando de cancelamento foi recebido após as entradas.
+    \item \textbf{Troco}: Os sinais \texttt{troco25} e \texttt{troco50} subiram para \texttt{1}, confirmando a devolução correta de 75c (25c + 50c). O sinal \texttt{produto} permaneceu em \texttt{0}, indicando que nenhum produto foi liberado.
+\end{itemize}
+
+\textbf{Assertivas:}
+\begin{verbatim}
+assert troco25 = '1' and troco50 = '1' and produto = '0';
+\end{verbatim}
+
+
+
+
+\section*{Conclusão}
+Os gráficos representativos dos testes confirmam a correta implementação do código da máquina de venda automática, evidenciando que os requisitos de funcionalidade e validação foram atendidos. Com base nos resultados obtidos, conclui-se que o trabalho está devidamente finalizado e pronto para apresentação ou implementação em um ambiente real.
+
+
+\end{document}

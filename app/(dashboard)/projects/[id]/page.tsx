@@ -31,6 +31,10 @@ export default function EditorPage() {
   const [userTier, setUserTier] = useState<Tier>("free");
   const [userId, setUserId] = useState<string>("");
 
+  // Always-current ref for compile handlers (avoids stale closure issues)
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
   const tierLimits = TIER_LIMITS[userTier];
   const maxCompilesPerDay = tierLimits.maxServerCompilesPerDay;
   const pageFormat = useMemo(() => detectPageFormat(value), [value]);
@@ -101,6 +105,7 @@ export default function EditorPage() {
 
   const handleChange = useCallback(
     (newValue: string) => {
+      valueRef.current = newValue; // Update ref immediately (sync)
       setValue(newValue);
 
       // Debounced save to Convex
@@ -114,11 +119,12 @@ export default function EditorPage() {
       // Schedule auto-compile after debounce (only if enabled + hash changed)
       scheduleAutoCompile(newValue, engine);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeDocId, updateContent, scheduleAutoCompile, engine]
   );
 
   async function handleCompile() {
-    compileServer(value, engine);
+    compileServer(valueRef.current, engine);
   }
 
   async function handleDownload() {
@@ -134,7 +140,7 @@ export default function EditorPage() {
 
     // No PDF yet — trigger compile and let user know
     toast.info("Compilando PDF...", { description: "O download iniciara apos a compilacao." });
-    compileServer(value, engine);
+    compileServer(valueRef.current, engine);
   }
 
   function handleProjectNameChange(name: string) {
@@ -142,22 +148,22 @@ export default function EditorPage() {
     updateProject({ projectId, name });
   }
 
-  // Ctrl+S: save immediately + compile
+  // Ctrl+S: save immediately + compile (reads from ref for always-fresh value)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
+        const current = valueRef.current;
         if (activeDocId) {
           if (saveRef.current) clearTimeout(saveRef.current);
-          updateContent({ documentId: activeDocId, content: value });
+          updateContent({ documentId: activeDocId, content: current });
         }
-        compileServer(value, engine);
+        compileServer(current, engine);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDocId, value, engine, compileServer, updateContent]);
+  }, [activeDocId, engine, compileServer, updateContent]);
 
   // Loading state
   if (!initialized) {

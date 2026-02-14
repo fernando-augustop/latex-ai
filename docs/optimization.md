@@ -159,7 +159,7 @@ Fonte: [Tectonic Issue #1013](https://github.com/tectonic-typesetting/tectonic/i
 | `app/api/compile/route.ts` | Reescrito: stub → rota direta com PDF binario |
 | `hooks/use-latex-compiler.ts` | `useAction` → `fetch("/api/compile")`, blob direto, tracking async |
 | `convex/latex.ts` | Nova mutation `trackDirectCompile` (fire-and-forget) |
-| `lib/tier-limits.ts` | autoCompileDebounceMs reduzido (free=2s, pro=1s, enterprise=0.8s) |
+| `lib/tier-limits.ts` | autoCompileDebounceMs uniforme (1s para todos os tiers) |
 | `app/(dashboard)/projects/[id]/page.tsx` | Engine default: `tectonic` → `pdflatex-fast` |
 | `.env.local` | Adicionado `LATEX_API_URL`, `LATEX_API_SECRET` |
 

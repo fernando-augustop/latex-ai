@@ -5,7 +5,7 @@
  */
 
 export const TIER_LIMITS = {
-  free: { maxProjects: 3, maxAiMessagesPerDay: 0, hasServerCompile: true, maxServerCompilesPerDay: Infinity, maxCompilesPerMinute: 15, storageLimitMB: 50 },
+  free: { maxProjects: 3, maxAiMessagesPerDay: 0, hasServerCompile: true, maxServerCompilesPerDay: Infinity, maxCompilesPerMinute: Infinity, storageLimitMB: 50 },
   pro: { maxProjects: Infinity, maxAiMessagesPerDay: 50, hasServerCompile: true, maxServerCompilesPerDay: Infinity, maxCompilesPerMinute: Infinity, storageLimitMB: 5000 },
   enterprise: { maxProjects: Infinity, maxAiMessagesPerDay: Infinity, hasServerCompile: true, maxServerCompilesPerDay: Infinity, maxCompilesPerMinute: Infinity, storageLimitMB: Infinity },
 } as const;

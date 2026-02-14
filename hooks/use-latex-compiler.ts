@@ -123,7 +123,7 @@ export function useLatexCompiler({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             source,
-            engine: engine ?? "tectonic",
+            engine: engine ?? "pdflatex-fast",
             documentId,
           }),
         });

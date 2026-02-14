@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse and validate body
     const body = await request.json();
-    const { source, documentId, engine = "tectonic" } = body;
+    const { source, documentId, engine = "pdflatex-fast" } = body;
 
     if (!source || typeof source !== "string") {
       return NextResponse.json(

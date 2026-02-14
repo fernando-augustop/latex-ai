@@ -22,9 +22,9 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     hasAi: false,
     hasServerCompile: true,
     maxServerCompilesPerDay: Infinity,
-    maxCompilesPerMinute: 15,
+    maxCompilesPerMinute: Infinity,
     storage: 50,
-    autoCompileDebounceMs: 2000,
+    autoCompileDebounceMs: 1000,
   },
   pro: {
     maxProjects: Infinity,
@@ -46,7 +46,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxServerCompilesPerDay: Infinity,
     maxCompilesPerMinute: Infinity,
     storage: Infinity,
-    autoCompileDebounceMs: 800,
+    autoCompileDebounceMs: 1000,
   },
 };
 
@@ -121,7 +121,7 @@ export const PRICING: PricingInfo[] = [
     annualMonthlyPrice: 0,
     features: [
       "3 projetos",
-      "Compilação no servidor (15/min)",
+      "Compilação no servidor (ilimitada)",
       "Editor básico com syntax highlighting",
       "50MB de armazenamento",
     ],
