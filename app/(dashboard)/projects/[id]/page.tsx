@@ -27,7 +27,7 @@ export default function EditorPage() {
   const [value, setValue] = useState("");
   const [initialized, setInitialized] = useState(false);
   const [activeDocId, setActiveDocId] = useState<Id<"documents"> | null>(null);
-  const [engine, setEngine] = useState("tectonic");
+  const [engine, setEngine] = useState("pdflatex-fast");
   const [userTier, setUserTier] = useState<Tier>("free");
   const [userId, setUserId] = useState<string>("");
 
@@ -58,8 +58,12 @@ export default function EditorPage() {
     durationMs: serverDurationMs,
     remainingCompiles,
     compileServer,
+    scheduleAutoCompile,
+    autoCompileEnabled,
+    setAutoCompileEnabled,
   } = useLatexCompiler({
     documentId: activeDocId,
+    autoCompileDebounceMs: tierLimits.autoCompileDebounceMs,
   });
 
   // Redirect if project not found
@@ -106,8 +110,11 @@ export default function EditorPage() {
           updateContent({ documentId: activeDocId, content: newValue });
         }, 2000);
       }
+
+      // Schedule auto-compile after debounce (only if enabled + hash changed)
+      scheduleAutoCompile(newValue, engine);
     },
-    [activeDocId, updateContent]
+    [activeDocId, updateContent, scheduleAutoCompile, engine]
   );
 
   async function handleCompile() {
@@ -177,6 +184,8 @@ export default function EditorPage() {
         serverError={serverError}
         remainingCompiles={remainingCompiles}
         maxCompilesPerDay={maxCompilesPerDay === Infinity ? null : maxCompilesPerDay}
+        autoCompileEnabled={autoCompileEnabled}
+        onAutoCompileToggle={setAutoCompileEnabled}
       />
       <div className="flex-1 overflow-hidden">
         <EditorLayout

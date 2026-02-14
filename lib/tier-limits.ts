@@ -10,6 +10,8 @@ export interface TierLimits {
   maxCompilesPerMinute: number;
   /** Storage limit in MB */
   storage: number;
+  /** Auto-compile debounce delay in milliseconds */
+  autoCompileDebounceMs: number;
 }
 
 export const TIER_LIMITS: Record<Tier, TierLimits> = {
@@ -22,6 +24,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxServerCompilesPerDay: Infinity,
     maxCompilesPerMinute: 15,
     storage: 50,
+    autoCompileDebounceMs: 2000,
   },
   pro: {
     maxProjects: Infinity,
@@ -32,6 +35,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxServerCompilesPerDay: Infinity,
     maxCompilesPerMinute: Infinity,
     storage: 5000,
+    autoCompileDebounceMs: 1000,
   },
   enterprise: {
     maxProjects: Infinity,
@@ -42,6 +46,7 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
     maxServerCompilesPerDay: Infinity,
     maxCompilesPerMinute: Infinity,
     storage: Infinity,
+    autoCompileDebounceMs: 800,
   },
 };
 

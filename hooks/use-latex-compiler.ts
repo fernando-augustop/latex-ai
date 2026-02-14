@@ -1,6 +1,6 @@
 "use client";
 
-import { useAction } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -10,16 +10,21 @@ type CompilerStatus = "idle" | "compiling" | "success" | "error" | "offline" | "
 
 interface UseLatexCompilerOptions {
   documentId: Id<"documents"> | null;
+  autoCompileEnabled?: boolean;
+  autoCompileDebounceMs?: number;
 }
 
 interface UseLatexCompilerReturn {
   status: CompilerStatus;
   pdfBlobUrl: string | null;
-  compilationId: Id<"compilations"> | null;
   error: string | null;
   durationMs: number | null;
   remainingCompiles: number | null;
-  compileServer: (source: string, engine?: string) => Promise<void>;
+  compileServer: (source: string, engine?: string, options?: { silent?: boolean }) => Promise<void>;
+  /** Schedule an auto-compile after debounce. Call on every editor change. */
+  scheduleAutoCompile: (source: string, engine?: string) => void;
+  autoCompileEnabled: boolean;
+  setAutoCompileEnabled: (enabled: boolean) => void;
 }
 
 /** Hash source string using SHA-256 and return hex digest. */
@@ -33,20 +38,28 @@ async function hashSource(source: string): Promise<string> {
 
 export function useLatexCompiler({
   documentId,
+  autoCompileEnabled: initialAutoCompile = true,
+  autoCompileDebounceMs = 2000,
 }: UseLatexCompilerOptions): UseLatexCompilerReturn {
   const [status, setStatus] = useState<CompilerStatus>("idle");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [compilationId, setCompilationId] = useState<Id<"compilations"> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
-  const [remainingCompiles, setRemainingCompiles] = useState<number | null>(null);
+  const [autoCompileEnabled, setAutoCompileEnabled] = useState(initialAutoCompile);
 
   // Track current blob URL for revocation
   const currentBlobUrlRef = useRef<string | null>(null);
   // Client-side hash cache: sourceHash → blob URL (avoids re-compiling identical source)
   const cacheRef = useRef<Map<string, string>>(new Map());
+  // Track the hash of the last successfully compiled source
+  const lastCompiledHashRef = useRef<string | null>(null);
+  // Auto-compile debounce timer
+  const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track if a compile is currently in progress (to prevent overlapping)
+  const compilingRef = useRef(false);
 
-  const compile = useAction(api.latexNode.compile);
+  // Fire-and-forget tracking mutation (does NOT block PDF display)
+  const trackCompile = useMutation(api.latex.trackDirectCompile);
 
   // Revoke old blob URL and set new one
   const setBlobUrl = useCallback((url: string | null) => {
@@ -61,114 +74,175 @@ export function useLatexCompiler({
 
   // Cleanup all blob URLs on unmount
   useEffect(() => {
+    const cache = cacheRef.current;
+    const timer = autoCompileTimerRef;
     return () => {
-      for (const url of cacheRef.current.values()) {
+      for (const url of cache.values()) {
         URL.revokeObjectURL(url);
       }
-      cacheRef.current.clear();
+      cache.clear();
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
     };
   }, []);
 
   const compileServer = useCallback(
-    async (source: string, engine?: string) => {
+    async (source: string, engine?: string, options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+
       if (!documentId) {
-        toast.error("Nenhum documento selecionado");
+        if (!silent) toast.error("Nenhum documento selecionado");
         return;
       }
 
-      // Check client-side hash cache
+      // Check client-side hash cache first (before setting status)
       const sourceHash = await hashSource(source);
       const cachedUrl = cacheRef.current.get(sourceHash);
       if (cachedUrl) {
         setStatus("success");
         setBlobUrl(cachedUrl);
         setDurationMs(null);
-        toast.success("Compilado (cache)");
+        lastCompiledHashRef.current = sourceHash;
+        if (!silent) toast.success("Compilado (cache)");
         return;
       }
 
+      // Prevent overlapping compiles
+      if (compilingRef.current) return;
+
+      // Optimistic UI: set compiling status immediately
       setStatus("compiling");
       setError(null);
-      const startTime = Date.now();
+      compilingRef.current = true;
 
       try {
-        const result = await compile({ documentId, source, engine });
+        // Direct fetch to Next.js API route (bypasses Convex)
+        const response = await fetch("/api/compile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source,
+            engine: engine ?? "tectonic",
+            documentId,
+          }),
+        });
 
-        if (result.remainingCompiles !== undefined) {
-          setRemainingCompiles(result.remainingCompiles ?? null);
-        }
-
-        if (result.status === "success" && result.pdfBase64) {
-          // Decode base64 → blob URL
-          const binaryString = atob(result.pdfBase64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
+        if (response.ok) {
+          // Success: response is PDF binary
+          const pdfBlob = await response.blob();
+          const url = URL.createObjectURL(pdfBlob);
+          const compileDuration = parseInt(
+            response.headers.get("X-Compile-Duration") ?? "0",
+            10
+          );
 
           // Store in cache
           cacheRef.current.set(sourceHash, url);
+          lastCompiledHashRef.current = sourceHash;
 
           setStatus("success");
           setBlobUrl(url);
-          setCompilationId(result.compilationId ?? null);
-          setDurationMs(result.durationMs ?? (Date.now() - startTime));
+          setDurationMs(compileDuration || null);
 
-          if (result.cached) {
-            toast.success("Compilado (cache do servidor)");
-          } else {
-            toast.success("Compilado com sucesso");
-          }
-        } else if (result.status === "success") {
-          // Success but no PDF data (shouldn't happen normally)
-          setStatus("success");
-          setCompilationId(result.compilationId ?? null);
-          setDurationMs(result.durationMs ?? (Date.now() - startTime));
-          toast.success("Compilado com sucesso");
+          if (!silent) toast.success("Compilado com sucesso");
+
+          // Fire-and-forget: track compile usage in Convex (does NOT block PDF)
+          trackCompile({
+            documentId,
+            sourceHash,
+            engine,
+            durationMs: compileDuration || undefined,
+          }).catch(() => {});
         } else {
-          const msg = result.errors ?? "Erro de compilação desconhecido";
-          setStatus("error");
-          setError(msg);
-          toast.error("Erro na compilação", { description: msg });
+          // Error: response is JSON
+          const errorData = await response.json();
+          const msg = errorData.error ?? "Erro de compilacao desconhecido";
+
+          if (response.status === 401) {
+            setStatus("error");
+            setError("Nao autenticado");
+            if (!silent)
+              toast.error("Sessao expirada", {
+                description: "Faca login novamente.",
+              });
+          } else if (
+            response.status === 429 ||
+            msg.includes("Rate limit")
+          ) {
+            setStatus("error");
+            setError("Aguarde um momento antes de compilar novamente");
+            if (!silent)
+              toast.warning("Aguarde um momento", {
+                description: "Muitas compilacoes em sequencia.",
+              });
+          } else {
+            setStatus("error");
+            setError(msg);
+            if (!silent)
+              toast.error("Erro na compilacao", { description: msg });
+          }
         }
       } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Erro inesperado na compilação";
+          err instanceof Error ? err.message : "Erro inesperado na compilacao";
 
-        if (msg.includes("Daily compilation limit")) {
-          setStatus("quota_exceeded");
-          setError("Limite diário de compilações atingido");
-          toast.error("Limite diário atingido", {
-            description: "Faça upgrade do plano para mais compilações.",
-          });
-        } else if (msg.includes("Rate limit exceeded")) {
-          // Per-minute rate limit — keep status retryable
-          setStatus("error");
-          setError("Aguarde um momento antes de compilar novamente");
-          toast.warning("Aguarde um momento", {
-            description: "Muitas compilações em sequência.",
-          });
-        } else if (
+        if (
           msg.toLowerCase().includes("offline") ||
           msg.includes("ECONNREFUSED") ||
-          msg.toLowerCase().includes("fetch failed")
+          msg.toLowerCase().includes("fetch failed") ||
+          msg.toLowerCase().includes("failed to fetch")
         ) {
           setStatus("offline");
-          setError("Servidor de compilação indisponível");
-          toast.error("Servidor de compilação offline");
+          setError("Servidor de compilacao indisponivel");
+          if (!silent) toast.error("Servidor de compilacao offline");
         } else {
           setStatus("error");
           setError(msg);
-          toast.error("Erro na compilação", { description: msg });
+          if (!silent)
+            toast.error("Erro na compilacao", { description: msg });
         }
+      } finally {
+        compilingRef.current = false;
       }
     },
-    [compile, documentId, setBlobUrl]
+    [documentId, setBlobUrl, trackCompile]
   );
 
-  return { status, pdfBlobUrl, compilationId, error, durationMs, remainingCompiles, compileServer };
+  // Auto-compile: schedule a compile after debounce, only if hash changed
+  const scheduleAutoCompile = useCallback(
+    (source: string, engine?: string) => {
+      if (autoCompileTimerRef.current) {
+        clearTimeout(autoCompileTimerRef.current);
+      }
+
+      if (!autoCompileEnabled || !documentId) return;
+
+      autoCompileTimerRef.current = setTimeout(async () => {
+        // Check if source actually changed since last compile
+        const sourceHash = await hashSource(source);
+        if (sourceHash === lastCompiledHashRef.current) return;
+        if (cacheRef.current.has(sourceHash)) return;
+        if (compilingRef.current) return;
+
+        // Silent auto-compile (no toasts)
+        compileServer(source, engine, { silent: true });
+      }, autoCompileDebounceMs);
+    },
+    [autoCompileEnabled, autoCompileDebounceMs, documentId, compileServer]
+  );
+
+  return {
+    status,
+    pdfBlobUrl,
+    error,
+    durationMs,
+    remainingCompiles: null,
+    compileServer,
+    scheduleAutoCompile,
+    autoCompileEnabled,
+    setAutoCompileEnabled,
+  };
 }
 
 export type { CompilerStatus, UseLatexCompilerOptions, UseLatexCompilerReturn };

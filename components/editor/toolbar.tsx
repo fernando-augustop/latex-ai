@@ -25,6 +25,7 @@ import {
   Loader2,
   Check,
   Pencil,
+  RefreshCw,
 } from "lucide-react";
 
 interface ToolbarProps {
@@ -38,6 +39,8 @@ interface ToolbarProps {
   serverError?: string | null;
   remainingCompiles?: number | null;
   maxCompilesPerDay?: number | null;
+  autoCompileEnabled?: boolean;
+  onAutoCompileToggle?: (enabled: boolean) => void;
 }
 
 export function Toolbar({
@@ -51,6 +54,8 @@ export function Toolbar({
   serverError,
   remainingCompiles,
   maxCompilesPerDay,
+  autoCompileEnabled,
+  onAutoCompileToggle,
 }: ToolbarProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(projectName);
@@ -128,6 +133,26 @@ export function Toolbar({
             maxCompilesPerDay={maxCompilesPerDay}
           />
 
+          {onAutoCompileToggle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={autoCompileEnabled ? "secondary" : "ghost"}
+                  size="icon"
+                  className={`btn-press h-8 w-8 rounded-full transition-colors ${
+                    autoCompileEnabled ? "text-primary" : "text-muted-foreground"
+                  }`}
+                  onClick={() => onAutoCompileToggle(!autoCompileEnabled)}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {autoCompileEnabled ? "Auto-compile: ON" : "Auto-compile: OFF"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -148,7 +173,7 @@ export function Toolbar({
             <TooltipContent>
               {isQuotaExhausted
                 ? "Limite diário de compilações atingido"
-                : "Compilar documento (Ctrl+Enter)"}
+                : "Compilar documento (Ctrl+S)"}
             </TooltipContent>
           </Tooltip>
 

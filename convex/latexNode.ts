@@ -3,14 +3,13 @@
 import crypto from "crypto";
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
-import { api, internal } from "./_generated/api";
-import { TIER_LIMITS, type Tier } from "./tierLimits";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 type CompileResult = {
   compilationId: Id<"compilations">;
   status: "success" | "error";
-  pdfBase64?: string;
+  pdfUrl?: string;
   logs?: string;
   errors?: string;
   cached: boolean;
@@ -18,7 +17,7 @@ type CompileResult = {
   durationMs?: number;
 };
 
-// ─── Compile Action ─────────────────────────────────────────────────
+// ─── Compile Action (Optimized: 8→4 DB round-trips) ────────────────
 
 export const compile = action({
   args: {
@@ -27,105 +26,55 @@ export const compile = action({
     engine: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<CompileResult> => {
+    const startTime = Date.now();
+
     // 1. Authenticate
     const identity = await ctx.auth.getUserIdentity();
     if (!identity || !identity.email) {
       throw new Error("Not authenticated");
     }
 
-    // 2. Look up user by email
-    const user = await ctx.runQuery(api.users.getByEmail, {
-      email: identity.email,
-    });
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const tier = user.tier as Tier;
-    const tierLimits = TIER_LIMITS[tier];
-    const engine = args.engine ?? "tectonic";
-    const startTime = Date.now();
-
-    // 3. Check daily quota (increment first — acts as reservation)
-    const compilesUsedToday = await ctx.runMutation(
-      internal.users.incrementCompiles,
-      { userId: user._id }
-    );
-
-    const maxDaily = tierLimits.maxServerCompilesPerDay;
-    if (maxDaily !== Infinity && compilesUsedToday > maxDaily) {
-      // Rollback the reservation since we're rejecting the compile
-      await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-      throw new Error(
-        `Daily compilation limit reached (${compilesUsedToday - 1}/${maxDaily}). Upgrade your plan for more compiles.`
-      );
-    }
-
-    const remaining =
-      maxDaily === Infinity
-        ? undefined
-        : Math.max(0, maxDaily - compilesUsedToday);
-
-    // 4. Compute source hash
+    // 2. Compute source hash
     const sourceHash = crypto
       .createHash("sha256")
       .update(args.source)
       .digest("hex");
 
-    // 5. Check server-side cache (PDF in Convex storage)
-    const cached = await ctx.runQuery(internal.latex.findCachedCompilation, {
-      documentId: args.documentId,
-      sourceHash,
-    });
-
-    if (cached?.pdfStorageId) {
-      const pdfUrl = await ctx.storage.getUrl(cached.pdfStorageId);
-      if (pdfUrl) {
-        try {
-          const pdfResponse = await fetch(pdfUrl);
-          const pdfBuffer = await pdfResponse.arrayBuffer();
-          const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
-          // Rollback the compile count — cache hit doesn't count
-          await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-          return {
-            compilationId: cached._id,
-            status: "success" as const,
-            pdfBase64,
-            logs: cached.logs,
-            cached: true,
-            remainingCompiles: remaining !== undefined ? remaining + 1 : undefined,
-            durationMs: 0,
-          };
-        } catch {
-          // Storage fetch failed — fall through to recompile
-        }
-      }
-    }
-
-    // 6. Create compilation record (with tier for rate-limiting)
-    const compilationId = await ctx.runMutation(
-      internal.latex.createCompilation,
+    // 3. Combined: user lookup + quota + cache check + rate limit + create compilation
+    const prep = await ctx.runMutation(
+      internal.latex.authorizeAndPrepareCompile,
       {
-        userId: user._id,
+        email: identity.email,
         documentId: args.documentId,
         sourceHash,
-        engine,
-        tier: user.tier,
+        engine: args.engine,
       }
     );
 
-    // 7. Mark as compiling
-    await ctx.runMutation(internal.latex.updateCompilation, {
-      compilationId,
-      status: "compiling",
-    });
+    // 4. Cache hit — return storage URL directly (no base64 conversion)
+    if (prep.cached && prep.pdfStorageId) {
+      const pdfUrl = await ctx.storage.getUrl(prep.pdfStorageId);
+      if (pdfUrl) {
+        return {
+          compilationId: prep.compilationId,
+          status: "success" as const,
+          pdfUrl,
+          logs: prep.logs,
+          cached: true,
+          remainingCompiles: prep.remaining,
+          durationMs: 0,
+        };
+      }
+      // Storage URL failed — fall through to recompile
+    }
 
-    // 8. Call external LaTeX API
+    // 5. Call external LaTeX API
     const apiUrl = process.env.LATEX_API_URL;
     if (!apiUrl) {
-      await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-      await ctx.runMutation(internal.latex.updateCompilation, {
-        compilationId,
+      await ctx.runMutation(internal.users.decrementCompiles, { userId: prep.userId });
+      await ctx.runMutation(internal.latex.finalizeCompilation, {
+        compilationId: prep.compilationId,
+        documentId: args.documentId,
         status: "error",
         errors: "LATEX_API_URL is not configured",
         durationMs: Date.now() - startTime,
@@ -135,9 +84,10 @@ export const compile = action({
 
     const apiSecret = process.env.LATEX_API_SECRET;
     if (!apiSecret) {
-      await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-      await ctx.runMutation(internal.latex.updateCompilation, {
-        compilationId,
+      await ctx.runMutation(internal.users.decrementCompiles, { userId: prep.userId });
+      await ctx.runMutation(internal.latex.finalizeCompilation, {
+        compilationId: prep.compilationId,
+        documentId: args.documentId,
         status: "error",
         errors: "LATEX_API_SECRET is not configured",
         durationMs: Date.now() - startTime,
@@ -160,16 +110,17 @@ export const compile = action({
         },
         body: JSON.stringify({
           source: args.source,
-          engine,
+          engine: args.engine ?? "tectonic",
           document_id: args.documentId,
         }),
       });
     } catch (err) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to reach LaTeX API";
-      await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-      await ctx.runMutation(internal.latex.updateCompilation, {
-        compilationId,
+      await ctx.runMutation(internal.users.decrementCompiles, { userId: prep.userId });
+      await ctx.runMutation(internal.latex.finalizeCompilation, {
+        compilationId: prep.compilationId,
+        documentId: args.documentId,
         status: "error",
         errors: errorMsg,
         durationMs: Date.now() - startTime,
@@ -181,9 +132,10 @@ export const compile = action({
     if (!contentType.includes("application/json")) {
       const body = await response.text();
       const errorMsg = `LaTeX API returned non-JSON response (HTTP ${response.status}): ${body.slice(0, 200)}`;
-      await ctx.runMutation(internal.users.decrementCompiles, { userId: user._id });
-      await ctx.runMutation(internal.latex.updateCompilation, {
-        compilationId,
+      await ctx.runMutation(internal.users.decrementCompiles, { userId: prep.userId });
+      await ctx.runMutation(internal.latex.finalizeCompilation, {
+        compilationId: prep.compilationId,
+        documentId: args.documentId,
         status: "error",
         errors: errorMsg,
         durationMs: Date.now() - startTime,
@@ -194,26 +146,27 @@ export const compile = action({
     const result = await response.json();
     const durationMs = Date.now() - startTime;
 
-    // 9. Handle error response
+    // 6. Handle error response
     if (!response.ok || result.error) {
-      await ctx.runMutation(internal.latex.updateCompilation, {
-        compilationId,
+      await ctx.runMutation(internal.latex.finalizeCompilation, {
+        compilationId: prep.compilationId,
+        documentId: args.documentId,
         status: "error",
         logs: result.logs,
         errors: result.error ?? `HTTP ${response.status}`,
         durationMs,
       });
       return {
-        compilationId,
+        compilationId: prep.compilationId,
         status: "error" as const,
         logs: result.logs,
         errors: result.error ?? `HTTP ${response.status}`,
         cached: false,
-        remainingCompiles: remaining,
+        remainingCompiles: prep.remaining,
       };
     }
 
-    // 10. Store PDF in Convex storage for caching
+    // 7. Store PDF in Convex storage
     let pdfStorageId: Id<"_storage"> | undefined;
     try {
       const pdfBytes = Buffer.from(result.pdf, "base64");
@@ -224,27 +177,29 @@ export const compile = action({
       // Storage failed — continue without caching
     }
 
-    // 11. Update compilation record
-    await ctx.runMutation(internal.latex.updateCompilation, {
-      compilationId,
+    // 8. Combined: update compilation record + document compile timestamp
+    await ctx.runMutation(internal.latex.finalizeCompilation, {
+      compilationId: prep.compilationId,
+      documentId: args.documentId,
       status: "success",
       logs: result.logs,
       durationMs,
       ...(pdfStorageId ? { pdfStorageId } : {}),
     });
 
-    // 12. Update document compile timestamp
-    await ctx.runMutation(internal.latex.updateDocumentCompileTime, {
-      documentId: args.documentId,
-    });
+    // 9. Return storage URL instead of base64 (saves ~33% transfer)
+    let pdfUrl: string | undefined;
+    if (pdfStorageId) {
+      pdfUrl = (await ctx.storage.getUrl(pdfStorageId)) ?? undefined;
+    }
 
     return {
-      compilationId,
+      compilationId: prep.compilationId,
       status: "success" as const,
-      pdfBase64: result.pdf,
+      pdfUrl,
       logs: result.logs,
       cached: false,
-      remainingCompiles: remaining,
+      remainingCompiles: prep.remaining,
       durationMs: result.duration_ms,
     };
   },

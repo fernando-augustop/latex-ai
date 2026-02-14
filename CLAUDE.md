@@ -58,9 +58,15 @@ latex-ai/
 │   ├── pdf-generator.ts          # Client-side PDF generation (html2canvas + jsPDF)
 │   ├── tier-limits.ts            # Tier definitions, pricing, feature gates
 │   └── utils.ts
+├── server/                       # LaTeX compilation server (deployed to omarchy VPS)
+│   ├── main.py                   # FastAPI app (pdflatex-fast + Tectonic)
+│   ├── latex-api.service          # Systemd unit file
+│   ├── requirements.txt          # Python deps
+│   ├── deploy.sh                 # One-command deploy script
+│   └── README.md                 # Full server documentation
 ├── public/logos/                  # SVG logo concepts (5 concepts, icon + horizontal variants)
 ├── output/playwright/            # Playwright screenshots for visual QA
-├── docs/                         # Project documentation + server setup guides
+├── docs/                         # Project documentation + optimization research
 ├── turbo.json                    # Turborepo config
 ├── package.json                  # pnpm + turbo
 └── pnpm-lock.yaml
@@ -76,7 +82,7 @@ latex-ai/
 - **AI**: Vercel AI SDK (`ai` + `@ai-sdk/react`) with OpenRouter provider (`@openrouter/ai-sdk-provider`)
 - **Auth**: BetterAuth (email/password + OAuth: Google, GitHub) — imports from `better-auth/minimal`
 - **Backend/Database**: Convex
-- **LaTeX Compile**: Tectonic via external API (all tiers, unlimited compiles)
+- **LaTeX Compile**: pdflatex-fast (default, with .fmt precompilation) + Tectonic fallback, via direct Next.js API route → self-hosted server
 - **Code Editor**: CodeMirror 6 with LaTeX support (`codemirror-lang-latex`)
 - **PDF Viewer**: iframe-based (server-compiled PDFs only, unified view for all tiers)
 - **Animations**: Framer Motion (with `AnimatePresence` for hero rotating title)
@@ -129,7 +135,7 @@ Uses oklch color space throughout. Primary color is a green/emerald tone:
 
 ### Feature Gates by Tier
 
-Tier limits are defined in both `lib/tier-limits.ts` (frontend) and `convex/tierLimits.ts` (backend). All tiers have `hasServerCompile: true` and unlimited compiles (`maxServerCompilesPerDay: Infinity`). Rate limiting: `maxCompilesPerMinute` (free=15, pro=15, enterprise=30). Daily usage is tracked in the `users` table (`compilesUsedToday`/`lastCompileResetDate`, both optional fields).
+Tier limits are defined in both `lib/tier-limits.ts` (frontend) and `convex/tierLimits.ts` (backend). All tiers have `hasServerCompile: true` and unlimited compiles (`maxServerCompilesPerDay: Infinity`). Rate limiting: `maxCompilesPerMinute` (free=15, pro=Infinity, enterprise=Infinity). Auto-compile debounce: free=2000ms, pro=1000ms, enterprise=800ms. Daily usage is tracked in the `users` table (`compilesUsedToday`/`lastCompileResetDate`, both optional fields) via fire-and-forget `trackDirectCompile` mutation.
 
 ## AI Chat System
 
@@ -161,24 +167,24 @@ All data flows through Convex — no hardcoded dummy data remains.
 - **New project dialog** (`components/editor/new-project-dialog.tsx`): accepts `userId` prop, calls `api.projects.create` + `api.documents.create` (with template content as `main.tex`), then navigates to the new project
 - **Editor page** (`app/(dashboard)/projects/[id]/page.tsx`): loads project + documents from Convex via URL param, auto-saves content with 2s debounce via `api.documents.updateContent`, saves project name via `api.projects.update`, supports Ctrl+S for immediate save + compile. Uses `fixed inset-0 z-50` to cover the full viewport (escapes the dashboard layout navbar — the editor has its own toolbar with back button).
 
-### Server-Side LaTeX Compilation (Convex)
+### LaTeX Compilation (Direct API Route)
 
-Architecture: Browser → Convex action (`"use node"`) → External LaTeX API (Tectonic on self-hosted server via Tailscale Funnel) → PDF returned as base64.
+Architecture: Browser → Next.js API route (`/api/compile`) → External LaTeX API (pdflatex-fast on self-hosted server via Tailscale Funnel) → PDF returned as binary.
 
-- **Schema**: `compilations` table tracks every compile job (userId, documentId, sourceHash, status, engine, logs, errors, durationMs). Indexed by user, document, document+hash, and status.
-- **`convex/latexNode.ts`** (`"use node"` action): authenticates user, tracks compile usage (via `users.incrementCompiles`), computes SHA-256 source hash, creates compilation record, calls external LaTeX API (`LATEX_API_URL`) with HMAC-signed request (`LATEX_API_SECRET`), validates JSON response (guards against non-JSON errors), returns PDF as base64 + `remainingCompiles`. Includes health check internal action.
-- **`convex/latex.ts`**: internal queries/mutations for compilation CRUD — `findCachedCompilation`, `createCompilation` (with tier-specific per-minute rate limit), `updateCompilation`, `updateDocumentCompileTime`, plus public queries.
+- **`app/api/compile/route.ts`**: Direct compilation route. Auth via `isAuthenticated()`, HMAC-SHA256 signing, calls `LATEX_API_URL/compile`, returns PDF as binary `application/pdf` response. Response headers: `X-Compile-Duration`, `X-Source-Hash`. No Convex round-trips during compilation.
+- **`convex/latex.ts`**: `trackDirectCompile` public mutation — fire-and-forget usage tracking called by the client after receiving PDF. Increments `compilesUsedToday` + updates document `lastCompiledAt`. Also contains internal mutations for compilation CRUD (legacy path) and public queries.
+- **`convex/latexNode.ts`** (legacy): `"use node"` action that compiles via Convex. Still exists and functional but no longer the primary compilation path. Used by health check cron.
 - **`convex/crons.ts`**: health check cron every 5 minutes against the LaTeX API.
-- **Env vars needed in Convex**: `LATEX_API_URL` (currently `https://omarchy.tailcee049.ts.net`), `LATEX_API_SECRET` (HMAC shared secret). Set via `npx convex env set`.
-- **Removed**: `documents.updateCompiledPdf` mutation (replaced by compilations table), `compileLatexToPdf` placeholder function, `compiledPdfUrl` field from documents schema.
+- **Env vars (Next.js)**: `LATEX_API_URL`, `LATEX_API_SECRET` (set in `.env.local`)
+- **Env vars (Convex)**: `LATEX_API_URL`, `LATEX_API_SECRET` (set via `npx convex env set`, used by legacy path + health check)
 
 ### Client-Side Hooks
 
-- **`hooks/use-latex-compiler.ts`**: `useLatexCompiler` hook — manages server compile state (status, pdfBlobUrl, error, durationMs, remainingCompiles). Features: SHA-256 client-side source hash cache (avoids re-compiling identical source), blob URL lifecycle management, offline detection, quota_exceeded status detection. Calls `api.latexNode.compile` action.
+- **`hooks/use-latex-compiler.ts`**: `useLatexCompiler` hook — manages compile state (status, pdfBlobUrl, error, durationMs). Calls `fetch("/api/compile")` directly (bypasses Convex). Response is PDF blob → `URL.createObjectURL()`. Features: SHA-256 client-side source hash cache, blob URL lifecycle management, offline detection, fire-and-forget `trackDirectCompile` mutation for usage accounting. Default engine: `pdflatex-fast`.
 
 ## LaTeX Preview (Server-Only)
 
-All tiers use server-compiled PDF (Tectonic) as the only preview. No client-side latex.js preview or Live/PDF toggle.
+All tiers use server-compiled PDF (pdflatex-fast default, Tectonic fallback) as the only preview. No client-side latex.js preview or Live/PDF toggle.
 
 - `latex.js` and `lib/latex/compiler.ts` still exist in the codebase but are no longer used in the editor preview flow
 - `lib/pdf-generator.ts` (html2canvas + jsPDF) still exists but is no longer the primary download path
@@ -198,7 +204,7 @@ The PDF viewer (`components/editor/pdf-viewer.tsx`) is a unified server-only vie
 
 ### Toolbar
 
-The toolbar has: back button, project name (editable), compilation status badge, Compilar button, PDF download button, settings dropdown. Engine is fixed to Tectonic (no user selector).
+The toolbar has: back button, project name (editable), compilation status badge, Compilar button, PDF download button, settings dropdown. Default engine is `pdflatex-fast` (with automatic Tectonic fallback on the server).
 
 ## Notes
 
@@ -207,7 +213,7 @@ The toolbar has: back button, project name (editable), compilation status badge,
 - `@codemirror/language` must be explicitly installed (pnpm strict mode)
 - Run `pnpm convex:dev` to initialize Convex (requires auth at dashboard.convex.dev)
 - See `docs/requirements.md` for full .env.local setup guide
-- **Vercel deploy** requires env vars: `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, `BETTER_AUTH_SECRET`, `OPENROUTER_API_KEY`
+- **Vercel deploy** requires env vars: `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, `BETTER_AUTH_SECRET`, `OPENROUTER_API_KEY`, `LATEX_API_URL`, `LATEX_API_SECRET`
 - **Convex LaTeX env vars**: `LATEX_API_URL`, `LATEX_API_SECRET` (set via `npx convex env set`)
 - Old Next.js default assets (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`) have been removed from `public/`
 - BetterAuth Convex integration imports from `better-auth/minimal` (not `better-auth`)
@@ -218,36 +224,74 @@ The toolbar has: back button, project name (editable), compilation status badge,
 - Cards use `rounded-2xl` with semi-transparent backgrounds and backdrop-blur
 - Ctrl+S in the editor triggers immediate save + server compile
 - CodeMirror editor: uses `height: 100%` on root + `.cm-scroller { overflow: auto }` for proper scroll containment. Container uses `overflow-hidden`. `TabsContent` in editor layout uses `min-h-0` to prevent flex overflow.
-- Server-side compilation uses `"use node"` Convex actions (`convex/latexNode.ts`) — required for Node.js `crypto` module
+- Primary compilation uses direct Next.js API route (`app/api/compile/route.ts`), bypassing Convex for speed. Legacy Convex path (`convex/latexNode.ts`) still exists for health checks
 - PDF download: uses server-compiled PDF blob; if none exists, triggers a compile first
-- See `docs/server-setup-guide.md` for full LaTeX server setup instructions (Tectonic + FastAPI + Tailscale Funnel)
+- See `server/README.md` for full LaTeX server documentation (pdflatex-fast + Tectonic, deploy script, benchmarks)
+- See `docs/optimization.md` for compilation optimization research and latency analysis
 
 ## LaTeX Compilation Server (Remote)
 
 **SSH access**: `ssh augustop@omarchy`
+**Local mirror**: `server/` folder in the project root (canonical source for deployments)
 
-The LaTeX compilation server runs on a self-hosted machine accessible via Tailscale. Key details:
+The LaTeX compilation server runs on a self-hosted Arch Linux machine accessible via Tailscale.
 
 - **Location**: `~/latex-api/main.py` — FastAPI app with `/health` and `/compile` endpoints
-- **Process**: uvicorn on `127.0.0.1:8787`, managed as a user systemd service (`~/latex-api/latex-api.service`)
-- **Engine**: Tectonic 0.15.0 (installed on the server)
+- **Process**: uvicorn on `127.0.0.1:8787`, managed as systemd service `latex-api`
+- **Engines**: pdflatex-fast (pdfTeX 3.14, TeX Live 2026/dev) + Tectonic 0.15.0 (fallback)
 - **Public URL**: `https://omarchy.tailcee049.ts.net` via Tailscale Funnel → proxies to `127.0.0.1:8787`
-- **Auth**: HMAC-SHA256 of the LaTeX source, sent via `X-API-Secret` header. Shared secret in the systemd service file.
+- **Auth**: HMAC-SHA256 of the LaTeX source, sent via `X-API-Secret` header
+- **Python**: 3.13, FastAPI 0.128.8, Uvicorn 0.40.0, Pydantic 2.12.5
+
+### pdflatex-fast engine
+
+Uses .fmt format file precompilation for **38x faster** incremental compiles vs Tectonic:
+1. Extracts preamble (before `\begin{document}`), hashes it (SHA-256, 16 chars)
+2. If `~/latex-cache/formats/{hash}.fmt` exists → reuses it
+3. If not → runs `pdflatex -ini` to create .fmt (one-time, ~500ms)
+4. Compiles with `pdflatex -fmt={hash}` — skips entire preamble (~60ms)
+5. If pdflatex-fast fails → automatic fallback to Tectonic
+
+### Server directories
+
+```
+~/latex-api/          # FastAPI app + systemd service
+~/latex-cache/
+├── formats/          # .fmt files (precompiled preambles, ~2MB each)
+└── workdirs/         # Persistent workdirs per document_id (.aux, .toc reuse)
+```
 
 ### Common operations
 
 ```bash
-# Check service status
-ssh augustop@omarchy "ps aux | grep uvicorn"
+# Service status
+ssh augustop@omarchy "systemctl status latex-api"
 
-# Restart the API
-ssh augustop@omarchy "kill \$(pgrep -f 'uvicorn main:app') && cd ~/latex-api && venv/bin/uvicorn main:app --host 127.0.0.1 --port 8787 &"
+# Restart
+ssh augustop@omarchy "sudo systemctl restart latex-api"
 
-# Check/fix Tailscale Funnel (must point to port 8787)
-ssh augustop@omarchy "tailscale funnel status"
-ssh augustop@omarchy "tailscale funnel --bg 8787"
+# Logs
+ssh augustop@omarchy "journalctl -u latex-api -f"
 
-# Test health
+# Health check
 curl https://omarchy.tailcee049.ts.net/health
+
+# Deploy from project root
+bash server/deploy.sh
+
+# Clear .fmt cache (forces preamble recompilation)
+ssh augustop@omarchy "rm ~/latex-cache/formats/*.fmt"
+
+# Tailscale Funnel status
+ssh augustop@omarchy "tailscale funnel status"
 ```
-- See `docs/latex-backend-integration-plan.md` for the full architecture plan
+
+### Compilation architecture
+
+```
+Browser → fetch("/api/compile") → Next.js API Route → LATEX_API_URL/compile → omarchy:8787
+       ← PDF binary (application/pdf) ← base64 decode ← JSON { pdf, duration_ms } ←
+```
+
+- See `server/README.md` for full server documentation, benchmarks, and troubleshooting
+- See `docs/optimization.md` for latency analysis and optimization research
